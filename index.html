@@ -380,7 +380,7 @@ input{font-family:inherit}
 
 <script type="module">
 // ═══════════════════════════════════════
-//  CONFIGURAÇÕES — TUDO JÁ ESTÁ PRONTO
+//  CONFIGURAÇÕES — FIREBASE & TMDB
 // ═══════════════════════════════════════
 
 const FIREBASE = {
@@ -392,11 +392,10 @@ const FIREBASE = {
   appId: "1:1046637575337:web:307c5abaf2f3b479a33db8"
 };
 
-// Chave pública de demonstração do TMDB (amplamente disponível)
 const TK = "8265bd1679663a7ea12ac168da84d2e8";
 
 // ═══════════════════════════════════════
-//  TMDB
+//  TMDB SETUP
 // ═══════════════════════════════════════
 const IP='https://image.tmdb.org/t/p';
 const NP='https://placehold.co/342x513/181818/444?text=No+Poster';
@@ -431,7 +430,7 @@ const T={
 };
 
 // ═══════════════════════════════════════
-//  FIREBASE
+//  FIREBASE ENGINE
 // ═══════════════════════════════════════
 let fbAuth=null,fbDB=null,me=null;
 const cbs=[];
@@ -484,12 +483,12 @@ async function saveWatch(m,pct){
 }
 
 // ═══════════════════════════════════════
-//  STATE
+//  STATE MANAGEMENT
 // ═══════════════════════════════════════
 let heroes=[],hi=0,ht=null,genres=[],eg=0,ep=1,favs=[];
 
 // ═══════════════════════════════════════
-//  UTILS
+//  UTILITIES
 // ═══════════════════════════════════════
 function toast(msg,type='ok'){
   const w=document.getElementById('toasts'),el=document.createElement('div');
@@ -504,7 +503,7 @@ function openAuthModal(){
 }
 
 // ═══════════════════════════════════════
-//  NAV
+//  NAVIGATION SPA
 // ═══════════════════════════════════════
 const SMAP={home:'secHome',movies:'secMovies',favs:'secFavs',watch:'secWatch'};
 function navTo(s){
@@ -522,7 +521,7 @@ function setupNav(){
 }
 
 // ═══════════════════════════════════════
-//  SIDEBAR
+//  SIDEBAR HANDLER
 // ═══════════════════════════════════════
 function setupSidebar(){
   const sb=document.getElementById('sidebar'),ov=document.getElementById('sbOv');
@@ -536,7 +535,7 @@ function setupSidebar(){
 const sbClose=()=>window.sbClose?.();
 
 // ═══════════════════════════════════════
-//  SEARCH
+//  LIVE SEARCH
 // ═══════════════════════════════════════
 function setupSearch(){
   const btn=document.getElementById('srchBtn'),wrap=document.getElementById('srchWrap'),
@@ -560,7 +559,7 @@ function setupSearch(){
 }
 
 // ═══════════════════════════════════════
-//  AUTH
+//  AUTHENTICATION SYSTEM
 // ═══════════════════════════════════════
 function setupAuth(){
   const mod=document.getElementById('authMod'),xb=document.getElementById('authX'),
@@ -644,7 +643,7 @@ function fbErr(c){
 }
 
 // ═══════════════════════════════════════
-//  HERO
+//  HERO CAROUSEL
 // ═══════════════════════════════════════
 function renderHero(m){
   document.getElementById('heroBg').style.backgroundImage=`url(${T.b(m.backdrop_path,'original')})`;
@@ -684,7 +683,7 @@ window.hFav=async(m,btn)=>{
 };
 
 // ═══════════════════════════════════════
-//  ROWS
+//  HOME CONTENT ROWS
 // ═══════════════════════════════════════
 const ROWS=[
   {t:'🔥 Em Alta Esta Semana',fn:()=>T.trending()},
@@ -708,7 +707,7 @@ async function loadRows(){
 }
 
 // ═══════════════════════════════════════
-//  CARD
+//  CARD GENERATOR
 // ═══════════════════════════════════════
 function mkCard(m,sz=''){
   const el=document.createElement('div'); el.className='mcard';
@@ -741,7 +740,7 @@ function refreshFavBtns(){
 }
 
 // ═══════════════════════════════════════
-//  EXPLORE
+//  EXPLORE GRID SECTION
 // ═══════════════════════════════════════
 async function setupExplore(){
   try{ const d=await T.genres(); genres=d.genres; buildFilters() }catch{}
@@ -771,7 +770,7 @@ async function loadGrid(reset=true){
 }
 
 // ═══════════════════════════════════════
-//  MOVIE MODAL
+//  NATIVE MOVIE PLAYER & DETAILS MODAL
 // ═══════════════════════════════════════
 window.openMovie=async function(id){
   const mod=document.getElementById('movieMod'), inner=document.getElementById('movieIn');
@@ -785,12 +784,26 @@ window.openMovie=async function(id){
       <div class="sk" style="height:13px;width:40%;margin-bottom:22px"></div>
       <div class="sk" style="height:80px"></div>
     </div>`;
-  const closeM=()=>{ mod.classList.remove('open'); document.body.style.overflow='' };
+
+  const closeM=()=>{ 
+    inner.querySelectorAll('video').forEach(v => v.pause());
+    mod.classList.remove('open'); 
+    document.body.style.overflow=''; 
+  };
   document.getElementById('movieX').onclick=closeM;
   mod.onclick=e=>{ if(e.target===mod) closeM() };
 
   try{
     const [det,cred,vids,sim]=await Promise.all([T.details(id),T.credits(id),T.videos(id),T.similar(id)]);
+    
+    let videoUrl = null;
+    if(fbDB){
+      try{
+        const movieDoc = await window.$.getDoc(window.$.doc(fbDB, 'catalog', String(id)));
+        if(movieDoc.exists()) videoUrl = movieDoc.data().videoUrl;
+      }catch(err){ console.warn("Firestore catálogo indisponível:", err) }
+    }
+
     const on=favs.some(f=>f.id===id),
           y=det.release_date?.split('-')[0]||'',
           rt=det.runtime?`${Math.floor(det.runtime/60)}h ${det.runtime%60}m`:'',
@@ -818,20 +831,39 @@ window.openMovie=async function(id){
             </div>
             <div class="m-genres">${gt}</div>
             <div class="m-acts">
-              <button class="m-btn p" id="wBtn">
-                <svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor"><polygon points="5 3 19 12 5 21 5 3"/></svg>
-                ${tr?'Assistir Trailer':'Ver no TMDB'}
-              </button>
+              ${videoUrl ? `
+                <button class="m-btn p" id="wBtn">
+                  <svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+                  Assistir Filme
+                </button>
+              ` : `
+                <button class="m-btn p" id="wBtn" disabled style="opacity:0.4; cursor:not-allowed;">
+                  Indisponível no Catálogo
+                </button>
+              `}
               <button class="m-btn s ${on?'on':''}" id="fBtn">${on?'❤️ Salvo':'🤍 Favoritar'}</button>
             </div>
           </div>
         </div>
+
+        ${videoUrl ? `
+          <div id="playerContainer" style="display:none; margin-bottom:28px;">
+            <h3 class="m-sec" style="color:var(--red)">🎬 Assistindo: ${det.title}</h3>
+            <div class="trailer-wrap" style="background:#000;">
+              <video id="mainVideoPlayer" controls controlsList="nodownload" poster="${T.b(det.backdrop_path)}" style="position:absolute; inset:0; width:100%; height:100%;">
+                <source src="${videoUrl}" type="video/mp4">
+                Seu navegador não suporta este reprodutor de vídeo.
+              </video>
+            </div>
+          </div>
+        ` : ''}
+
         ${det.overview?`<p class="m-overview">${det.overview}</p>`:''}
         ${tr?`<h3 class="m-sec">▶ Trailer Oficial</h3>
           <div class="trailer-wrap">
             <iframe src="https://www.youtube.com/embed/${tr.key}?rel=0&modestbranding=1" allow="autoplay;encrypted-media" allowfullscreen loading="lazy"></iframe>
           </div>`:''}
-        ${cast.length?`<h3 class="m-sec">👥 Elenco</h3>
+        ${cast.length?`<h3 class="m-sec">👥 Elenco Principal</h3>
           <div class="cast-scroll">
             ${cast.map(a=>`<div class="cast-card">
               <img class="cast-photo" src="${T.f(a.profile_path)}" alt="${a.name}" onerror="this.src='${NF}'"/>
@@ -839,17 +871,36 @@ window.openMovie=async function(id){
               <div class="cast-char">${a.character||''}</div>
             </div>`).join('')}
           </div>`:''}
-        ${sim.results?.length?`<h3 class="m-sec">🎬 Similares</h3><div class="sim-scroll" id="simSc"></div>`:''}
+        ${sim.results?.length?`<h3 class="m-sec">🎬 Filmes Similares</h3><div class="sim-scroll" id="simSc"></div>`:''}
         <div style="height:8px"></div>
       </div>`;
 
     const sc=document.getElementById('simSc');
     if(sc) sim.results.slice(0,10).forEach(m=>sc.appendChild(mkCard(m,'sm')));
 
-    document.getElementById('wBtn').addEventListener('click',()=>{
-      window.open(tr?`https://www.youtube.com/watch?v=${tr.key}`:`https://www.themoviedb.org/movie/${det.id}`,'_blank');
-      if(me) saveWatch(mo,15);
-    });
+    if(videoUrl){
+      const wBtn = document.getElementById('wBtn');
+      const playerContainer = document.getElementById('playerContainer');
+      const videoPlayer = document.getElementById('mainVideoPlayer');
+
+      wBtn.addEventListener('click', () => {
+        playerContainer.style.display = 'block';
+        playerContainer.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        videoPlayer.play();
+        if(me) saveWatch(mo, 2);
+      });
+
+      let lastSavedPct = 0;
+      videoPlayer.addEventListener('timeupdate', () => {
+        if(!me || videoPlayer.duration === 0) return;
+        const pct = Math.round((videoPlayer.currentTime / videoPlayer.duration) * 100);
+        if(pct % 5 === 0 && pct !== lastSavedPct){
+          lastSavedPct = pct;
+          saveWatch(mo, pct);
+        }
+      });
+    }
+
     document.getElementById('fBtn').addEventListener('click',async()=>{
       if(!me){ toast('Faça login para favoritar.','er'); closeM(); openAuthModal(); return }
       const isOn=await togFav(det); favs=await loadFavs();
@@ -866,7 +917,7 @@ window.openMovie=async function(id){
 };
 
 // ═══════════════════════════════════════
-//  FAVORITOS
+//  FAVORITES RENDERING
 // ═══════════════════════════════════════
 async function renderFavs(){
   const grid=document.getElementById('favGrid'), empty=document.getElementById('favEmpty');
@@ -879,7 +930,7 @@ async function renderFavs(){
 }
 
 // ═══════════════════════════════════════
-//  CONTINUAR
+//  WATCH HISTORY RENDERING
 // ═══════════════════════════════════════
 async function renderWatch(){
   const list=document.getElementById('wList'), empty=document.getElementById('watchEmpty');
@@ -907,7 +958,7 @@ async function renderWatch(){
 }
 
 // ═══════════════════════════════════════
-//  INIT
+//  APPLICATION INITIALIZATION
 // ═══════════════════════════════════════
 async function init(){
   setupNav(); setupSidebar(); setupSearch(); setupAuth();
