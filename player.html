@@ -1,0 +1,248 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Filmix Player</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+html,body{height:100%;background:#000;color:#fff;font-family:'DM Sans',sans-serif;overflow:hidden}
+body{display:flex;flex-direction:column}
+
+/* TOPO */
+.top{display:flex;align-items:center;gap:12px;padding:10px 18px;background:#0a0a0a;border-bottom:1px solid #1a1a1a;flex-shrink:0;z-index:10}
+.back{display:flex;align-items:center;gap:6px;padding:7px 14px;background:#1e1e1e;color:#fff;border:none;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;transition:.2s;flex-shrink:0}
+.back:hover{background:#2563eb}
+.logo{font-size:18px;font-weight:700;letter-spacing:2px;flex-shrink:0}
+.logo span{color:#2563eb}
+.ttl{font-size:14px;font-weight:600;flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:#ccc}
+
+/* PLAYER */
+.pw{flex:1;position:relative;background:#000}
+iframe{position:absolute;inset:0;width:100%;height:100%;border:none;z-index:1}
+
+/* OVERLAY DE STATUS */
+.status{position:absolute;inset:0;background:#000;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:20px;z-index:5;transition:opacity .5s}
+.status.hide{opacity:0;pointer-events:none}
+
+/* SPINNER */
+.ring{width:56px;height:56px;border-radius:50%;border:3px solid #1e1e1e;border-top-color:#2563eb;animation:spin .9s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+
+.stxt{font-size:15px;font-weight:600;color:#ccc}
+.sdesc{font-size:12px;color:#444;margin-top:-10px}
+
+/* BARRA DE PROGRESSO DOS SERVIDORES */
+.dots{display:flex;gap:8px;margin-top:4px}
+.dot2{width:8px;height:8px;border-radius:50%;background:#222;transition:.3s}
+.dot2.try{background:#2563eb;animation:pulse .8s ease-in-out infinite}
+.dot2.ok{background:#22c55e}
+.dot2.fail{background:#ef4444}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.4}}
+
+/* ERRO FINAL */
+.err-box{display:flex;flex-direction:column;align-items:center;gap:12px;display:none}
+.err-ico{font-size:48px}
+.err-ttl{font-size:18px;font-weight:700}
+.err-sub{font-size:13px;color:#555;text-align:center;max-width:320px;line-height:1.6}
+.retry-btn{padding:10px 24px;background:#2563eb;color:#fff;border:none;border-radius:9px;font-size:14px;font-weight:700;cursor:pointer;transition:.2s}
+.retry-btn:hover{background:#1d4ed8;transform:translateY(-1px)}
+
+/* INFO DO FILME */
+.info-bar{display:flex;align-items:center;gap:8px;padding:8px 18px;background:#080808;border-top:1px solid #151515;flex-shrink:0;font-size:12px;color:#444}
+.info-bar span{color:#2563eb;font-weight:600}
+</style>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;600;700&display=swap" rel="stylesheet"/>
+</head>
+<body>
+
+<div class="top">
+  <button class="back" onclick="history.back()">
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="m15 18-6-6 6-6"/></svg>
+    Voltar
+  </button>
+  <div class="logo"><span>F</span>ILMIX</div>
+  <span class="ttl" id="ttl">Carregando…</span>
+</div>
+
+<div class="pw">
+  <div class="status" id="status">
+    <!-- Estado: carregando -->
+    <div id="loadState">
+      <div style="display:flex;flex-direction:column;align-items:center;gap:16px">
+        <div class="ring"></div>
+        <div class="stxt" id="stxt">Encontrando a melhor fonte…</div>
+        <div class="sdesc" id="sdesc">Testando servidores automaticamente</div>
+        <div class="dots" id="dots"></div>
+      </div>
+    </div>
+    <!-- Estado: erro -->
+    <div class="err-box" id="errState">
+      <div class="err-ico">😔</div>
+      <div class="err-ttl">Filme indisponível</div>
+      <div class="err-sub">Nenhum servidor conseguiu carregar este filme no momento. Tente novamente ou escolha outro filme.</div>
+      <button class="retry-btn" onclick="startPlayer()">Tentar novamente</button>
+    </div>
+  </div>
+  <iframe id="fr"
+    allowfullscreen
+    allow="autoplay; fullscreen; picture-in-picture; encrypted-media; gyroscope; accelerometer"
+    referrerpolicy="no-referrer"
+    sandbox="allow-scripts allow-same-origin allow-forms allow-popups allow-presentation allow-top-navigation-by-user-activation allow-modals">
+  </iframe>
+</div>
+
+<div class="info-bar">
+  <span>FILMIX PLAYER</span> · Reprodução automática · Pressione F11 para tela cheia
+</div>
+
+<script>
+const params = new URLSearchParams(location.search);
+const MOVIE_ID = params.get('id');
+const TITLE = params.get('title') || 'Filme';
+
+document.getElementById('ttl').textContent = TITLE;
+document.title = '▶ ' + TITLE + ' — Filmix';
+
+// ══════════════════════════════════════════
+// SERVIDORES — testados em ordem automática
+// ══════════════════════════════════════════
+const SERVERS = [
+  id => `https://vidsrc.xyz/embed/movie?tmdb=${id}`,
+  id => `https://vidsrc.to/embed/movie/${id}`,
+  id => `https://vidsrc.me/embed/movie?tmdb=${id}`,
+  id => `https://embed.su/embed/movie/${id}`,
+  id => `https://www.2embed.cc/embed/${id}`,
+  id => `https://autoembed.co/movie/tmdb/${id}`,
+  id => `https://player.smashy.stream/movie/${id}`,
+  id => `https://rivestream.live/embed?type=movie&id=${id}`,
+];
+
+const fr     = document.getElementById('fr');
+const status = document.getElementById('status');
+const stxt   = document.getElementById('stxt');
+const sdesc  = document.getElementById('sdesc');
+const dots   = document.getElementById('dots');
+const loadSt = document.getElementById('loadState');
+const errSt  = document.getElementById('errState');
+
+// Cria os indicadores de servidor
+dots.innerHTML = SERVERS.map(() => `<div class="dot2"></div>`).join('');
+const dotEls = dots.querySelectorAll('.dot2');
+
+let currentIdx = 0;
+let checkTimer = null;
+let successTimer = null;
+
+// Detecta se o iframe carregou conteúdo real via postMessage
+// (alguns servidores mandam mensagens quando prontos)
+window.addEventListener('message', e => {
+  // Qualquer mensagem do iframe = provavelmente carregou
+  if (currentIdx < SERVERS.length) {
+    confirmSuccess();
+  }
+});
+
+function startPlayer() {
+  currentIdx = 0;
+  loadSt.style.display = 'flex';
+  errSt.style.display = 'none';
+  dotEls.forEach(d => { d.className = 'dot2'; });
+  tryServer(0);
+}
+
+function tryServer(idx) {
+  if (idx >= SERVERS.length) {
+    showError();
+    return;
+  }
+
+  currentIdx = idx;
+
+  // Atualiza visual
+  if (idx > 0) dotEls[idx - 1].className = 'dot2 fail';
+  dotEls[idx].className = 'dot2 try';
+
+  stxt.textContent = idx === 0
+    ? 'Encontrando a melhor fonte…'
+    : `Tentando fonte alternativa… (${idx + 1}/${SERVERS.length})`;
+  sdesc.textContent = 'Aguarde um momento';
+
+  // Limpa timers anteriores
+  clearTimeout(checkTimer);
+  clearTimeout(successTimer);
+
+  // Carrega no iframe
+  fr.src = 'about:blank';
+  setTimeout(() => {
+    try {
+      fr.src = SERVERS[idx](MOVIE_ID);
+    } catch(e) {
+      tryServer(idx + 1);
+      return;
+    }
+
+    // Tenta detectar sucesso: se o iframe não der erro em X segundos, assume que funcionou
+    // Timeout agressivo: 5s para servidores rápidos, depois tenta próximo
+    checkTimer = setTimeout(() => {
+      // Tenta verificar se iframe tem conteúdo
+      try {
+        // Se conseguir acessar contentDocument, está vazio ou bloqueado
+        const doc = fr.contentDocument;
+        if (!doc || doc.body === null || doc.body.innerHTML.trim() === '') {
+          throw new Error('empty');
+        }
+        // Tem conteúdo acessível (raro em cross-origin, mas tenta)
+        confirmSuccess();
+      } catch(e) {
+        // Cross-origin: não conseguimos verificar diretamente
+        // Se der SecurityError, significa que o iframe carregou algo (cross-origin bloqueou acesso)
+        if (e instanceof DOMException && e.name === 'SecurityError') {
+          // Iframe carregou um site externo = provavelmente funcionou!
+          confirmSuccess();
+        } else {
+          // Iframe vazio ou bloqueou embed — tenta próximo
+          tryServer(idx + 1);
+        }
+      }
+    }, 5000);
+
+  }, 150);
+}
+
+function confirmSuccess() {
+  clearTimeout(checkTimer);
+  clearTimeout(successTimer);
+
+  // Marca como sucesso
+  if (currentIdx < dotEls.length) {
+    dotEls[currentIdx].className = 'dot2 ok';
+  }
+
+  stxt.textContent = 'Reproduzindo!';
+  sdesc.textContent = 'Carregando vídeo…';
+
+  // Esconde overlay depois de 1.5s
+  successTimer = setTimeout(() => {
+    status.classList.add('hide');
+  }, 1500);
+}
+
+function showError() {
+  clearTimeout(checkTimer);
+  clearTimeout(successTimer);
+  loadSt.style.display = 'none';
+  errSt.style.display = 'flex';
+  fr.src = 'about:blank';
+}
+
+// Inicia
+if (MOVIE_ID) {
+  startPlayer();
+} else {
+  stxt.textContent = 'ID do filme não informado.';
+  sdesc.textContent = 'Volte e tente novamente.';
+}
+</script>
+</body>
+</html>
