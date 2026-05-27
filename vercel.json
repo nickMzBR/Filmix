@@ -1,14 +1,14 @@
 {
   "rewrites": [
-    { "source": "/api/proxy", "destination": "/api/proxy" },
     { "source": "/player", "destination": "/player.html" },
     { "source": "/", "destination": "/index.html" }
   ],
   "headers": [
     {
-      "source": "/api/(.*)",
+      "source": "/(.*)",
       "headers": [
-        { "key": "Access-Control-Allow-Origin", "value": "*" }
+        { "key": "X-Frame-Options", "value": "SAMEORIGIN" },
+        { "key": "Cache-Control", "value": "public, max-age=0, must-revalidate" }
       ]
     }
   ]
