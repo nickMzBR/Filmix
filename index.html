@@ -423,11 +423,11 @@ function openAuth(){$('aov').classList.add('on');document.body.style.overflow='h
 // PLAYER
 // ══════════════════════════════════════════
 function openPlayer(m){
-  // Salva no histórico antes de abrir
   if(me) sWatch(m, 10);
-  // Abre player.html na mesma aba — página do próprio Filmix
-  const url='player.html?id='+m.id+'&title='+encodeURIComponent(m.title);
-  window.location.href=url;
+  // usa caminho relativo que funciona tanto local quanto no Vercel
+  const base = location.pathname.replace(/\/[^\/]*$/, '') || '';
+  const url = base + '/player.html?id=' + m.id + '&title=' + encodeURIComponent(m.title);
+  window.location.href = url;
 }
 
 function setupPlayer(){}
