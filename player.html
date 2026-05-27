@@ -14,21 +14,28 @@ body{display:flex;flex-direction:column}
 .logo{font-size:18px;font-weight:700;letter-spacing:2px;flex-shrink:0}.logo span{color:#2563eb}
 .ttl{font-size:14px;font-weight:600;flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:#ccc}
 .pw{flex:1;position:relative;background:#000}
-iframe{position:absolute;inset:0;width:100%;height:100%;border:none;z-index:1}
-.ov{position:absolute;inset:0;background:#000;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:18px;z-index:5;transition:opacity .5s;padding:24px;text-align:center}
+/* iframe ocupa tudo e recebe cliques normalmente */
+#fr{position:absolute;inset:0;width:100%;height:100%;border:none;z-index:1}
+/* escudo invisível — só ativado quando necessário para bloquear popup */
+#shield{position:absolute;inset:0;z-index:2;background:transparent;display:none}
+/* overlay de loading */
+.ov{position:absolute;inset:0;background:#000;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:18px;z-index:10;padding:24px;text-align:center;transition:opacity .5s}
 .ov.hide{opacity:0;pointer-events:none}
 .ring{width:52px;height:52px;border-radius:50%;border:3px solid #1e1e1e;border-top-color:#2563eb;animation:spin .9s linear infinite}
 @keyframes spin{to{transform:rotate(360deg)}}
 .stxt{font-size:15px;font-weight:600;color:#ccc}
 .sdesc{font-size:12px;color:#555}
-.bar{width:200px;height:3px;background:#1e1e1e;border-radius:2px;overflow:hidden}
-.bar-fill{height:100%;background:#2563eb;border-radius:2px;transition:width .4s ease}
+.pbar{width:200px;height:3px;background:#1e1e1e;border-radius:2px;overflow:hidden}
+.pbar-f{height:100%;background:#2563eb;border-radius:2px;transition:width .4s}
 .err-box{display:none;flex-direction:column;align-items:center;gap:14px}
 .err-ico{font-size:44px}
 .err-ttl{font-size:18px;font-weight:700}
 .err-sub{font-size:13px;color:#555;max-width:300px;line-height:1.6}
 .retry-btn{padding:10px 24px;background:#2563eb;color:#fff;border:none;border-radius:9px;font-size:14px;font-weight:700;cursor:pointer}
 .retry-btn:hover{background:#1d4ed8}
+/* aviso popup bloqueado */
+#adnotice{position:absolute;top:10px;right:10px;z-index:20;background:rgba(37,99,235,.92);color:#fff;font-size:11px;font-weight:600;padding:5px 10px;border-radius:6px;opacity:0;transition:opacity .3s;pointer-events:none}
+#adnotice.show{opacity:1}
 </style>
 </head>
 <body>
@@ -42,115 +49,150 @@ iframe{position:absolute;inset:0;width:100%;height:100%;border:none;z-index:1}
 </div>
 <div class="pw">
   <div class="ov" id="ov">
-    <div id="loadState" style="display:flex;flex-direction:column;align-items:center;gap:16px">
+    <div id="loadSt" style="display:flex;flex-direction:column;align-items:center;gap:16px">
       <div class="ring"></div>
       <div class="stxt" id="stxt">Carregando filme…</div>
-      <div class="sdesc" id="sdesc">Buscando melhor fonte disponível</div>
-      <div class="bar"><div class="bar-fill" id="barFill" style="width:0%"></div></div>
+      <div class="sdesc" id="sdesc">Buscando melhor fonte</div>
+      <div class="pbar"><div class="pbar-f" id="pf" style="width:0%"></div></div>
     </div>
-    <div class="err-box" id="errState">
+    <div class="err-box" id="errSt">
       <div class="err-ico">😔</div>
       <div class="err-ttl">Indisponível no momento</div>
-      <div class="err-sub">Não conseguimos carregar este filme agora. Tente novamente ou escolha outro.</div>
-      <button class="retry-btn" onclick="load()">Tentar novamente</button>
+      <div class="err-sub">Não encontramos este filme agora. Tente novamente ou escolha outro.</div>
+      <button class="retry-btn" onclick="loadMovie()">Tentar novamente</button>
     </div>
   </div>
   <iframe id="fr" allowfullscreen
     allow="autoplay; fullscreen; picture-in-picture; encrypted-media; gyroscope; accelerometer"
-    referrerpolicy="no-referrer">
+    referrerpolicy="no-referrer"
+    sandbox="allow-scripts allow-same-origin allow-forms allow-popups allow-presentation allow-top-navigation-by-user-activation allow-modals">
   </iframe>
+  <div id="shield"></div>
+  <div id="adnotice">🛡️ Anúncio bloqueado</div>
 </div>
-<script>
-const p = new URLSearchParams(location.search);
-const ID = p.get('id');
-const TITLE = p.get('title') || 'Filme';
 
+<script>
+const params = new URLSearchParams(location.search);
+const ID    = params.get('id');
+const TITLE = params.get('title') || 'Filme';
 document.getElementById('ttl').textContent = TITLE;
 document.title = '▶ ' + TITLE + ' — Filmix';
 
-const fr       = document.getElementById('fr');
-const ov       = document.getElementById('ov');
-const stxt     = document.getElementById('stxt');
-const sdesc    = document.getElementById('sdesc');
-const barFill  = document.getElementById('barFill');
-const loadSt   = document.getElementById('loadState');
-const errSt    = document.getElementById('errState');
+const fr      = document.getElementById('fr');
+const shield  = document.getElementById('shield');
+const ov      = document.getElementById('ov');
+const loadSt  = document.getElementById('loadSt');
+const errSt   = document.getElementById('errSt');
+const stxt    = document.getElementById('stxt');
+const sdesc   = document.getElementById('sdesc');
+const pf      = document.getElementById('pf');
+const notice  = document.getElementById('adnotice');
 
-function setProgress(pct, txt, sub) {
-  barFill.style.width = pct + '%';
-  if (txt) stxt.textContent = txt;
-  if (sub !== undefined) sdesc.textContent = sub;
+// ── Bloqueia popups no frame PAI ──────────────────
+window.open = () => { showBlocked(); return null; };
+
+// Detecta quando o iframe tenta navegar a janela pai
+// (popunder/redirect) e bloqueia
+let lastNav = Date.now();
+window.addEventListener('blur', () => {
+  // Se a janela perdeu o foco logo após um click, provavelmente abriu popup
+  const dt = Date.now() - lastNav;
+  if (dt < 1000) {
+    // Traz o foco de volta
+    setTimeout(() => window.focus(), 100);
+    showBlocked();
+  }
+});
+
+// Escudo temporário: ativado nos primeiros 3s após o player carregar
+// para capturar o click inicial que normalmente dispara o popup
+function activateShield(ms) {
+  shield.style.display = 'block';
+  shield.addEventListener('click', shieldClick);
+  setTimeout(() => {
+    shield.style.display = 'none';
+    shield.removeEventListener('click', shieldClick);
+  }, ms);
+}
+
+function shieldClick(e) {
+  e.preventDefault();
+  lastNav = 0; // reseta para não detectar como popup
+  // Repassa o click para o iframe manualmente (sem abrir popup)
+  const rect = fr.getBoundingClientRect();
+  // Não conseguimos fazer isso cross-origin, mas pelo menos bloqueamos o primeiro click
+  showBlocked();
+  // Após bloquear o primeiro, remove o escudo para o usuário poder interagir
+  shield.style.display = 'none';
+}
+
+function showBlocked() {
+  notice.classList.add('show');
+  setTimeout(() => notice.classList.remove('show'), 2000);
+}
+
+// ── Progresso ─────────────────────────────────────
+function setP(pct, t, s) {
+  pf.style.width = pct + '%';
+  if (t) stxt.textContent = t;
+  if (s !== undefined) sdesc.textContent = s;
+}
+
+function success() {
+  setP(100, 'Reproduzindo!', '');
+  setTimeout(() => {
+    ov.classList.add('hide');
+    // Ativa escudo por 3s para bloquear o primeiro click (que normalmente dispara popup)
+    activateShield(3000);
+  }, 600);
 }
 
 function showErr() {
   loadSt.style.display = 'none';
-  errSt.style.display = 'flex';
+  errSt.style.display  = 'flex';
 }
 
-function success() {
-  setProgress(100, 'Reproduzindo!', '');
-  setTimeout(() => ov.classList.add('hide'), 1000);
-}
-
-async function load() {
+// ── Carrega o filme via proxy ──────────────────────
+function loadMovie() {
   if (!ID) { stxt.textContent = 'ID inválido'; return; }
-
   loadSt.style.display = 'flex';
-  errSt.style.display = 'none';
+  errSt.style.display  = 'none';
   ov.classList.remove('hide');
   fr.src = 'about:blank';
 
-  setProgress(10, 'Buscando fonte…', 'Conectando ao servidor');
+  setP(10, 'Buscando fonte…', 'Conectando ao servidor');
+  setTimeout(() => setP(35, 'Carregando…', 'Preparando player'), 1000);
+  setTimeout(() => setP(60, 'Carregando…', 'Quase pronto'), 3000);
 
-  try {
-    // Usa o proxy da Vercel que remove os bloqueios server-side
-    const proxyUrl = '/api/proxy?id=' + ID;
+  fr.src = '/api/proxy?id=' + ID;
 
-    setProgress(40, 'Carregando…', 'Preparando player');
+  fr.onload = () => {
+    try {
+      const doc = fr.contentDocument;
+      const body = doc?.body?.innerHTML || '';
+      if (body.includes('indisponível') || body.length < 300) showErr();
+      else success();
+    } catch(e) {
+      // SecurityError = conteúdo cross-origin carregado = sucesso
+      success();
+    }
+  };
 
-    fr.src = proxyUrl;
+  fr.onerror = () => showErr();
 
-    // Detecta carregamento do iframe
-    fr.onload = () => {
-      try {
-        // Se consegue acessar = página de erro do proxy (same-origin)
-        const doc = fr.contentDocument;
-        const body = doc?.body?.innerHTML || '';
-        if (body.includes('indisponível') || body.length < 200) {
-          showErr();
-        } else {
-          success();
-        }
-      } catch(e) {
-        // SecurityError = conteúdo externo carregado = sucesso
-        success();
-      }
-    };
-
-    fr.onerror = () => showErr();
-
-    // Timeout de segurança
-    setTimeout(() => {
-      if (!ov.classList.contains('hide')) {
-        try {
-          const doc = fr.contentDocument;
-          if (!doc || doc.body?.innerHTML?.length < 200) showErr();
-          else success();
-        } catch(e) {
-          success(); // cross-origin = carregou
-        }
-      }
-    }, 15000);
-
-    setProgress(70, 'Carregando…', 'Quase lá');
-
-  } catch(e) {
-    showErr();
-  }
+  // Timeout de segurança: 20s
+  setTimeout(() => {
+    if (ov.classList.contains('hide')) return;
+    try {
+      const doc = fr.contentDocument;
+      if (!doc || (doc.body?.innerHTML?.length || 0) < 300) showErr();
+      else success();
+    } catch(e) { success(); }
+  }, 20000);
 }
 
-if (ID) load();
-else { stxt.textContent = 'Filme não encontrado'; sdesc.textContent = ''; }
+if (ID) loadMovie();
+else stxt.textContent = 'Filme não encontrado';
 </script>
 </body>
 </html>
