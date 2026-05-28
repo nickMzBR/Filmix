@@ -9,27 +9,33 @@
 html,body{height:100%;background:#000;color:#fff;font-family:sans-serif;overflow:hidden}
 body{display:flex;flex-direction:column}
 
-/* BARRA TOPO */
-.top{display:flex;align-items:center;gap:12px;padding:10px 16px;background:#0a0a0a;border-bottom:1px solid #1a1a1a;flex-shrink:0;z-index:50}
-.back{display:flex;align-items:center;gap:6px;padding:7px 14px;background:#1e1e1e;color:#fff;border:none;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;transition:.2s;flex-shrink:0}
+.top{display:flex;align-items:center;gap:10px;padding:10px 14px;background:#0a0a0a;border-bottom:1px solid #1a1a1a;flex-shrink:0}
+.back{display:flex;align-items:center;gap:5px;padding:6px 12px;background:#1e1e1e;color:#fff;border:none;border-radius:7px;font-size:13px;font-weight:600;cursor:pointer;transition:.2s;flex-shrink:0}
 .back:hover{background:#2563eb}
-.logo{font-size:18px;font-weight:700;letter-spacing:2px;flex-shrink:0}.logo span{color:#2563eb}
+.logo{font-size:17px;font-weight:700;letter-spacing:2px;flex-shrink:0}.logo span{color:#2563eb}
 .ttl{font-size:13px;color:#aaa;flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 
-/* BARRA DE IDIOMA */
-.lang-bar{display:flex;align-items:center;gap:6px;padding:7px 16px;background:#0d0d0d;border-bottom:1px solid #161616;flex-shrink:0}
-.lang-lbl{font-size:10px;font-weight:700;letter-spacing:1px;color:#444;flex-shrink:0}
-.lang-btn{padding:4px 12px;border-radius:5px;font-size:12px;font-weight:600;border:1px solid #2a2a2a;color:#555;background:transparent;cursor:pointer;transition:.15s;flex-shrink:0}
-.lang-btn:hover{border-color:#2563eb;color:#fff}
-.lang-btn.on{background:#2563eb;border-color:#2563eb;color:#fff}
-.lang-sep{width:1px;height:16px;background:#2a2a2a;margin:0 4px}
+/* BARRA DE FONTES */
+.src-bar{display:flex;align-items:stretch;background:#0d0d0d;border-bottom:1px solid #1a1a1a;flex-shrink:0;overflow-x:auto;scrollbar-width:none}
+.src-bar::-webkit-scrollbar{display:none}
+.src-btn{flex-shrink:0;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:8px 16px;font-size:12px;font-weight:600;color:#555;background:none;border:none;border-bottom:2px solid transparent;cursor:pointer;transition:.15s;gap:2px;line-height:1.2}
+.src-btn span.badge{font-size:9px;font-weight:700;letter-spacing:.5px;padding:1px 5px;border-radius:3px;text-transform:uppercase}
+.src-btn .badge.ptbr{background:rgba(34,197,94,.15);color:#22c55e}
+.src-btn .badge.en{background:rgba(99,102,241,.15);color:#818cf8}
+.src-btn .badge.leg{background:rgba(245,158,11,.15);color:#f59e0b}
+.src-btn:hover{color:#fff}
+.src-btn.on{color:#fff;border-bottom-color:#2563eb}
+.src-btn.on .badge.ptbr{background:rgba(34,197,94,.3)}
+.src-btn.on .badge.en{background:rgba(99,102,241,.3)}
+.src-btn.on .badge.leg{background:rgba(245,158,11,.3)}
+.src-div{width:1px;background:#1e1e1e;margin:6px 0}
 
-/* ÁREA DO PLAYER */
+/* PLAYER */
 .pw{flex:1;position:relative;background:#000;overflow:hidden}
 #fr{position:absolute;inset:0;width:100%;height:100%;border:none;z-index:1}
 
 /* LOADING */
-.ld{position:absolute;inset:0;background:#000;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;z-index:10;transition:opacity .5s;padding:24px;text-align:center}
+.ld{position:absolute;inset:0;background:rgba(0,0,0,.95);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;z-index:10;transition:opacity .5s;padding:24px;text-align:center}
 .ld.off{opacity:0;pointer-events:none}
 .spin{width:46px;height:46px;border-radius:50%;border:3px solid #1e1e1e;border-top-color:#2563eb;animation:sp .9s linear infinite}
 @keyframes sp{to{transform:rotate(360deg)}}
@@ -37,7 +43,6 @@ body{display:flex;flex-direction:column}
 .ld-s{font-size:12px;color:#555;line-height:1.6;max-width:280px}
 .ld-retry{padding:9px 22px;background:#2563eb;color:#fff;border:none;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;margin-top:4px}
 .ld-retry:hover{background:#1d4ed8}
-.ld-note{font-size:11px;color:#333;margin-top:4px;line-height:1.5;max-width:300px}
 </style>
 </head>
 <body>
@@ -48,23 +53,14 @@ body{display:flex;flex-direction:column}
   <span class="ttl" id="ttl"></span>
 </div>
 
-<div class="lang-bar">
-  <span class="lang-lbl">IDIOMA:</span>
-  <button class="lang-btn on" onclick="setLang('pt',this)">🇧🇷 Português</button>
-  <button class="lang-btn" onclick="setLang('en',this)">🇺🇸 Inglês</button>
-  <button class="lang-btn" onclick="setLang('es',this)">🇪🇸 Espanhol</button>
-  <div class="lang-sep"></div>
-  <span class="lang-lbl">LEGENDA:</span>
-  <button class="lang-btn on" id="subPt" onclick="setSub('pt',this)">PT</button>
-  <button class="lang-btn" id="subEn" onclick="setSub('en',this)">EN</button>
-  <button class="lang-btn" id="subOff" onclick="setSub('off',this)">OFF</button>
-</div>
+<!-- FONTES — PT-BR primeiro -->
+<div class="src-bar" id="srcBar"></div>
 
 <div class="pw">
   <div class="ld" id="ld">
     <div class="spin" id="spin"></div>
     <div class="ld-t" id="ldT">Carregando…</div>
-    <div class="ld-s" id="ldS">Conectando ao servidor de vídeo</div>
+    <div class="ld-s" id="ldS">Buscando fonte em português</div>
   </div>
   <iframe id="fr"
     allowfullscreen
@@ -85,128 +81,193 @@ const TITLE = q.get('title') || '';
 document.getElementById('ttl').textContent = TITLE;
 document.title = '▶ ' + TITLE + ' — Filmix';
 
+// ══════════════════════════════════════════
+// FONTES — ordenadas: PT-BR > Legendado > EN
+// ══════════════════════════════════════════
+function buildSources(id, type, sea, ep) {
+  const isTV = type === 'tv';
+  return [
+    // ── PT-BR dublado ──────────────────────
+    {
+      label: 'SuperFlix',
+      badge: 'PT-BR',
+      badgeType: 'ptbr',
+      url: isTV
+        ? `https://superflixapi.top/serie/${id}/${sea}/${ep}`
+        : `https://superflixapi.top/filme/${id}`,
+    },
+    {
+      label: 'WarezCDN',
+      badge: 'PT-BR',
+      badgeType: 'ptbr',
+      url: isTV
+        ? `https://warezcdn.com/embed/serie.php?id=${id}&t=${sea}&e=${ep}`
+        : `https://warezcdn.com/embed/player.php?id=${id}`,
+    },
+    {
+      label: 'MegaFlix',
+      badge: 'PT-BR',
+      badgeType: 'ptbr',
+      url: isTV
+        ? `https://megaflix.co/serie/${id}/${sea}/${ep}`
+        : `https://megaflix.co/filme/${id}`,
+    },
+    // ── Legendado PT ───────────────────────
+    {
+      label: 'VidSrc',
+      badge: 'LEG PT',
+      badgeType: 'leg',
+      url: isTV
+        ? `https://vidsrc.xyz/embed/tv?tmdb=${id}&season=${sea}&episode=${ep}&ds_lang=pt`
+        : `https://vidsrc.xyz/embed/movie?tmdb=${id}&ds_lang=pt`,
+    },
+    {
+      label: 'Embed.su',
+      badge: 'LEG PT',
+      badgeType: 'leg',
+      url: isTV
+        ? `https://embed.su/embed/tv/${id}/${sea}/${ep}`
+        : `https://embed.su/embed/movie/${id}`,
+    },
+    // ── Inglês fallback ────────────────────
+    {
+      label: 'AutoEmbed',
+      badge: 'EN',
+      badgeType: 'en',
+      url: isTV
+        ? `https://autoembed.co/tv/tmdb/${id}-${sea}-${ep}`
+        : `https://autoembed.co/movie/tmdb/${id}`,
+    },
+    {
+      label: 'MultiEmbed',
+      badge: 'EN',
+      badgeType: 'en',
+      url: isTV
+        ? `https://multiembed.mov/?video_id=${id}&tmdb=1&s=${sea}&e=${ep}`
+        : `https://multiembed.mov/?video_id=${id}&tmdb=1`,
+    },
+  ];
+}
+
+const SOURCES = buildSources(ID, TYPE, SEA, EP);
+
 const fr   = document.getElementById('fr');
 const ld   = document.getElementById('ld');
 const ldT  = document.getElementById('ldT');
 const ldS  = document.getElementById('ldS');
 const spin = document.getElementById('spin');
+const bar  = document.getElementById('srcBar');
 
-let lang = 'pt', sub = 'pt';
-let loadTimer = null;
+let cur = 0, loadTimer = null, autoTrying = true;
 
 // Bloqueia popups
 window.open = () => null;
 window.addEventListener('blur', () => setTimeout(() => window.focus?.(), 50));
 
-function getUrl(l, s) {
-  // AutoEmbed suporta lang e legenda via parâmetros
-  const subParam = s === 'off' ? '' : `&sub_lang=${s}`;
-  if (TYPE === 'tv') {
-    return `https://autoembed.co/tv/tmdb/${ID}-${SEA}-${EP}?lang=${l}${subParam}`;
-  }
-  return `https://autoembed.co/movie/tmdb/${ID}?lang=${l}${subParam}`;
-}
+// ── Constrói barra de fontes ──────────────
+bar.innerHTML = SOURCES.map((s, i) => `
+  <button class="src-btn ${i===0?'on':''}" id="sb${i}" onclick="loadSrc(${i},true)">
+    ${s.label}
+    <span class="badge ${s.badgeType}">${s.badge}</span>
+  </button>
+`).join('<div class="src-div"></div>');
 
-function load() {
+// ── Carrega uma fonte ─────────────────────
+function loadSrc(idx, manual) {
+  if (idx >= SOURCES.length) { showFail(); return; }
+  cur = idx;
+  if (manual) autoTrying = false; // usuário escolheu manualmente
+
   clearTimeout(loadTimer);
   spin.style.display = 'block';
   ld.classList.remove('off');
-  // Remove botão de retry se existir
   ld.querySelector('.ld-retry')?.remove();
-  ld.querySelector('.ld-note')?.remove();
 
-  ldT.textContent = 'Carregando…';
-  ldS.textContent = 'Conectando ao servidor de vídeo';
+  document.querySelectorAll('.src-btn').forEach((b,i) => b.classList.toggle('on', i===idx));
 
+  const src = SOURCES[idx];
+  ldT.textContent = `Carregando ${src.label}…`;
+  ldS.textContent = src.badgeType === 'ptbr'
+    ? '🇧🇷 Buscando versão em português'
+    : src.badgeType === 'leg'
+    ? '📝 Buscando versão legendada'
+    : '🌐 Carregando versão em inglês';
+
+  // Remove o iframe temporariamente para forçar reload
   fr.src = 'about:blank';
 
   setTimeout(() => {
-    fr.src = getUrl(lang, sub);
-  }, 150);
+    fr.src = src.url;
+  }, 120);
 
-  fr.onload = checkLoad;
-  fr.onerror = fail;
+  // Detecção de carregamento
+  let checked = false;
+  function check() {
+    if (checked) return;
+    checked = true;
+    clearTimeout(loadTimer);
 
-  // Timeout: 20s
-  loadTimer = setTimeout(checkLoad, 20000);
-}
+    let ok = false;
+    try {
+      const doc = fr.contentDocument || fr.contentWindow?.document;
+      ok = (doc?.documentElement?.innerHTML?.length || 0) > 800;
+    } catch(e) {
+      // SecurityError = cross-origin = conteúdo carregado = SUCESSO
+      ok = true;
+    }
 
-function checkLoad() {
-  clearTimeout(loadTimer);
-  let ok = false;
-  try {
-    // Se acessar contentDocument sem erro = same-origin (about:blank ou erro)
-    const doc = fr.contentDocument || fr.contentWindow?.document;
-    const len = doc?.documentElement?.innerHTML?.length || 0;
-    // Se for > 1000 chars = tem conteúdo real
-    ok = len > 1000;
-  } catch(e) {
-    // SecurityError = conteúdo cross-origin carregado = SUCESSO
-    ok = true;
+    if (ok) {
+      success(src.label, src.badgeType);
+    } else if (autoTrying && idx + 1 < SOURCES.length) {
+      // Auto: tenta próximo
+      setTimeout(() => loadSrc(idx + 1, false), 300);
+    } else {
+      showFail();
+    }
   }
 
-  if (ok) {
-    success();
-  } else {
-    // Espera mais 3s e tenta de novo
-    loadTimer = setTimeout(() => {
-      let ok2 = false;
-      try {
-        const doc = fr.contentDocument || fr.contentWindow?.document;
-        ok2 = (doc?.documentElement?.innerHTML?.length || 0) > 1000;
-      } catch(e) { ok2 = true; }
-      ok2 ? success() : fail();
-    }, 3000);
-  }
+  fr.onload = () => {
+    // Espera 1s para o iframe processar antes de checar
+    setTimeout(check, 1000);
+  };
+  fr.onerror = () => {
+    checked = true;
+    clearTimeout(loadTimer);
+    if (autoTrying && idx + 1 < SOURCES.length) loadSrc(idx + 1, false);
+    else showFail();
+  };
+
+  // Timeout 14s
+  loadTimer = setTimeout(() => {
+    if (!checked) check();
+  }, 14000);
 }
 
-function success() {
-  clearTimeout(loadTimer);
+function success(name, type) {
   spin.style.display = 'none';
-  ldT.textContent = '▶ Reproduzindo';
+  const emoji = type==='ptbr' ? '🇧🇷' : type==='leg' ? '📝' : '🌐';
+  ldT.textContent = `${emoji} Reproduzindo — ${name}`;
   ldS.textContent = '';
-  setTimeout(() => ld.classList.add('off'), 600);
+  setTimeout(() => ld.classList.add('off'), 700);
 }
 
-function fail() {
-  clearTimeout(loadTimer);
+function showFail() {
+  autoTrying = false;
   spin.style.display = 'none';
   ldT.textContent = '😔 Não disponível';
-  ldS.textContent = 'Este título pode não estar disponível no momento. Títulos populares têm maior cobertura.';
+  ldS.textContent = 'Nenhuma fonte conseguiu carregar este título.\nTente outro filme ou volte mais tarde.';
 
   if (!ld.querySelector('.ld-retry')) {
     const btn = document.createElement('button');
     btn.className = 'ld-retry';
     btn.textContent = 'Tentar novamente';
-    btn.onclick = load;
+    btn.onclick = () => { autoTrying = true; loadSrc(0, false); };
     ld.appendChild(btn);
   }
 }
 
-window.setLang = function(l, el) {
-  lang = l;
-  document.querySelectorAll('.lang-btn').forEach(b => {
-    if (['pt','en','es'].includes(b.textContent.replace(/[^a-z]/gi,'').toLowerCase().trim().slice(-2))) {
-      b.classList.remove('on');
-    }
-  });
-  // Marca apenas o botão de idioma clicado
-  document.querySelectorAll('.lang-btn').forEach(b => {
-    if (b.onclick?.toString().includes(`'${l}'`)) b.classList.add('on');
-  });
-  el.classList.add('on');
-  load();
-};
-
-window.setSub = function(s, el) {
-  sub = s;
-  document.querySelectorAll('#subPt,#subEn,#subOff').forEach(b => b.classList.remove('on'));
-  el.classList.add('on');
-  load();
-};
-
-if (ID) load();
-else { spin.style.display='none'; ldT.textContent='ID não informado'; ldS.textContent=''; }
+if (ID) loadSrc(0, false);
+else { spin.style.display='none'; ldT.textContent='ID não informado'; }
 </script>
 </body>
 </html>
