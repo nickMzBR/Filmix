@@ -6,211 +6,675 @@
 <title>Filmix Player</title>
 <style>
 *{margin:0;padding:0;box-sizing:border-box}
-html,body{height:100%;background:#000;color:#fff;font-family:sans-serif}
+html,body{height:100%;background:#000;color:#fff;font-family:'DM Sans',sans-serif;overflow:hidden;user-select:none}
 body{display:flex;flex-direction:column}
 
-.top{display:flex;align-items:center;gap:12px;padding:10px 16px;background:#0a0a0a;border-bottom:1px solid #1a1a1a;flex-shrink:0}
-.back{display:flex;align-items:center;gap:6px;padding:7px 14px;background:#1e1e1e;color:#fff;border:none;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer}
-.back:hover{background:#2563eb}
-.logo{font-size:18px;font-weight:700;letter-spacing:2px}.logo span{color:#2563eb}
-.ttl{font-size:13px;color:#aaa;flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+/* TOP BAR */
+.top{display:flex;align-items:center;gap:12px;padding:10px 16px;background:linear-gradient(to bottom,rgba(0,0,0,.95),transparent);position:absolute;top:0;left:0;right:0;z-index:30;transition:opacity .3s}
+.top.hide{opacity:0;pointer-events:none}
+.back{display:flex;align-items:center;gap:6px;padding:7px 14px;background:rgba(255,255,255,.12);backdrop-filter:blur(8px);color:#fff;border:none;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;transition:.2s}
+.back:hover{background:rgba(37,99,235,.8)}
+.logo{font-size:17px;font-weight:700;letter-spacing:2px}.logo span{color:#2563eb}
+.ttl{font-size:13px;color:rgba(255,255,255,.7);flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 
-/* Seletor de fonte */
-.src-bar{display:flex;gap:0;background:#0d0d0d;border-bottom:1px solid #161616;flex-shrink:0;overflow-x:auto;scrollbar-width:none}
-.src-bar::-webkit-scrollbar{display:none}
-.src-btn{flex-shrink:0;padding:10px 16px;font-size:12px;font-weight:600;color:#555;background:none;border:none;border-bottom:2px solid transparent;cursor:pointer;transition:.15s;white-space:nowrap}
-.src-btn:hover{color:#fff}.src-btn.on{color:#2563eb;border-bottom-color:#2563eb}
+/* PLAYER WRAPPER */
+.pw{flex:1;position:relative;background:#000;cursor:none}
+.pw.show-cursor{cursor:default}
+video{width:100%;height:100%;display:block;object-fit:contain}
 
-/* PLAYER AREA */
-.pw{flex:1;position:relative;background:#000;overflow:hidden}
-
-/* O iframe ocupa 100% — sem pointer-events manipulation */
-#fr{position:absolute;inset:0;width:100%;height:100%;border:none}
-
-/* Camada de loading sobre o iframe */
-.ld{position:absolute;inset:0;background:#000;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;z-index:5;transition:opacity .5s}
+/* LOADING OVERLAY */
+.ld{position:absolute;inset:0;background:rgba(0,0,0,.85);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;z-index:20;transition:opacity .4s;text-align:center;padding:24px}
 .ld.off{opacity:0;pointer-events:none}
-.spin{width:44px;height:44px;border-radius:50%;border:3px solid #1e1e1e;border-top-color:#2563eb;animation:s .9s linear infinite}
-@keyframes s{to{transform:rotate(360deg)}}
-.ld-t{font-size:14px;font-weight:600;color:#ccc}
-.ld-s{font-size:12px;color:#444;text-align:center;line-height:1.5}
-.retry{margin-top:6px;padding:8px 20px;background:#2563eb;color:#fff;border:none;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer}
-.retry:hover{background:#1d4ed8}
+.spin{width:48px;height:48px;border-radius:50%;border:3px solid rgba(255,255,255,.1);border-top-color:#2563eb;animation:sp .9s linear infinite}
+@keyframes sp{to{transform:rotate(360deg)}}
+.ld-t{font-size:15px;font-weight:600;color:#ddd}
+.ld-s{font-size:12px;color:#555;max-width:280px;line-height:1.6}
+.ld-retry{padding:9px 22px;background:#2563eb;color:#fff;border:none;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;margin-top:4px}
+.ld-retry:hover{background:#1d4ed8}
+
+/* BOTTOM CONTROLS */
+.ctrl{position:absolute;bottom:0;left:0;right:0;z-index:30;background:linear-gradient(transparent,rgba(0,0,0,.95));padding:40px 16px 14px;transition:opacity .3s}
+.ctrl.hide{opacity:0;pointer-events:none}
+
+/* PROGRESS */
+.prog-wrap{position:relative;height:18px;display:flex;align-items:center;cursor:pointer;margin-bottom:10px}
+.prog-bg{position:absolute;left:0;right:0;height:4px;background:rgba(255,255,255,.15);border-radius:2px}
+.prog-buf{position:absolute;left:0;height:4px;background:rgba(255,255,255,.25);border-radius:2px;width:0%}
+.prog-fill{position:absolute;left:0;height:4px;background:#2563eb;border-radius:2px;width:0%;transition:width .1s}
+.prog-dot{position:absolute;width:14px;height:14px;background:#2563eb;border-radius:50%;top:50%;transform:translate(-50%,-50%);left:0%;opacity:0;transition:opacity .2s,left .1s;box-shadow:0 0 8px rgba(37,99,235,.6)}
+.prog-wrap:hover .prog-dot{opacity:1}
+.prog-time{position:absolute;top:-28px;background:rgba(0,0,0,.85);padding:3px 7px;border-radius:4px;font-size:11px;font-weight:600;display:none;white-space:nowrap;transform:translateX(-50%)}
+
+/* BOTTOM ROW */
+.ctrl-row{display:flex;align-items:center;gap:8px}
+.cbtn{width:38px;height:38px;border-radius:8px;background:none;border:none;color:#fff;font-size:18px;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:.15s;flex-shrink:0}
+.cbtn:hover{background:rgba(255,255,255,.12)}
+.cbtn svg{width:20px;height:20px;fill:currentColor}
+.vol-wrap{display:flex;align-items:center;gap:6px}
+.vol-slider{-webkit-appearance:none;appearance:none;width:70px;height:3px;background:rgba(255,255,255,.2);border-radius:2px;outline:none;cursor:pointer}
+.vol-slider::-webkit-slider-thumb{-webkit-appearance:none;width:12px;height:12px;border-radius:50%;background:#2563eb;cursor:pointer}
+.time-txt{font-size:12px;color:rgba(255,255,255,.7);font-variant-numeric:tabular-nums;flex-shrink:0;margin-left:4px}
+.spacer{flex:1}
+
+/* MENU DROPDOWN (legendas/idioma/qualidade) */
+.menu-btn{position:relative}
+.dropdown{position:absolute;bottom:48px;right:0;background:#1a1a1a;border:1px solid #2a2a2a;border-radius:10px;min-width:200px;overflow:hidden;opacity:0;pointer-events:none;transform:translateY(8px);transition:.2s;z-index:50}
+.dropdown.open{opacity:1;pointer-events:all;transform:translateY(0)}
+.dd-section{padding:6px 12px 4px;font-size:10px;font-weight:700;letter-spacing:1px;color:#555;text-transform:uppercase}
+.dd-item{display:flex;align-items:center;justify-content:space-between;padding:9px 14px;font-size:13px;cursor:pointer;transition:.15s;gap:8px}
+.dd-item:hover{background:rgba(255,255,255,.07)}
+.dd-item.on{color:#2563eb}
+.dd-item .check{opacity:0;font-size:14px}
+.dd-item.on .check{opacity:1}
+.dd-sep{height:1px;background:#222;margin:4px 0}
+
+/* FONTE ATUAL badge */
+.src-badge{position:absolute;top:60px;right:16px;z-index:25;background:rgba(37,99,235,.85);backdrop-filter:blur(6px);color:#fff;font-size:10px;font-weight:700;padding:4px 10px;border-radius:6px;opacity:0;transition:opacity .4s}
+.src-badge.show{opacity:1}
+
+/* SKIP BUTTONS (+10s/-10s) ao clicar */
+.skip-indicator{position:absolute;top:50%;transform:translateY(-50%);z-index:15;pointer-events:none;display:flex;flex-direction:column;align-items:center;gap:4px;opacity:0;transition:opacity .3s}
+.skip-indicator.show{opacity:1}
+.skip-indicator svg{width:36px;height:36px;fill:rgba(255,255,255,.8)}
+.skip-indicator span{font-size:12px;font-weight:700;color:rgba(255,255,255,.8)}
+#skipL{left:12%}.#skipR{right:12%}
+
+/* PLAY/PAUSE CENTER */
+.center-play{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);z-index:15;pointer-events:none;opacity:0;transition:opacity .3s}
+.center-play svg{width:64px;height:64px;fill:rgba(255,255,255,.85);filter:drop-shadow(0 2px 12px rgba(0,0,0,.8))}
+.center-play.show{opacity:1}
 </style>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;600;700&display=swap" rel="stylesheet"/>
 </head>
 <body>
-<div class="top">
+
+<!-- TOP -->
+<div class="top" id="topBar">
   <button class="back" onclick="history.back()">← Voltar</button>
   <div class="logo"><span>F</span>ILMIX</div>
   <span class="ttl" id="ttl"></span>
 </div>
 
-<div class="src-bar" id="srcBar"></div>
-
-<div class="pw">
+<!-- PLAYER -->
+<div class="pw" id="pw">
+  <!-- Loading -->
   <div class="ld" id="ld">
-    <div class="spin"></div>
+    <div class="spin" id="spin"></div>
     <div class="ld-t" id="ldT">Carregando…</div>
-    <div class="ld-s" id="ldS">Aguarde enquanto conectamos ao servidor</div>
+    <div class="ld-s" id="ldS">Buscando melhor fonte de vídeo</div>
   </div>
-  <iframe id="fr"
-    allowfullscreen
-    allow="autoplay; fullscreen; picture-in-picture; encrypted-media; gyroscope; accelerometer; clipboard-write"
-    referrerpolicy="no-referrer"
-    sandbox="allow-scripts allow-same-origin allow-forms allow-popups allow-presentation allow-top-navigation-by-user-activation allow-modals allow-pointer-lock">
-  </iframe>
+
+  <!-- Skip indicators -->
+  <div class="skip-indicator" id="skipL" style="left:12%">
+    <svg viewBox="0 0 24 24"><path d="M12 5V1L7 6l5 5V7c3.31 0 6 2.69 6 6s-2.69 6-6 6-6-2.69-6-6H4c0 4.42 3.58 8 8 8s8-3.58 8-8-3.58-8-8-8z"/></svg>
+    <span>-10s</span>
+  </div>
+  <div class="skip-indicator" id="skipR" style="right:12%">
+    <svg viewBox="0 0 24 24"><path d="M12 5V1l5 5-5 5V7c-3.31 0-6 2.69-6 6s2.69 6 6 6 6-2.69 6-6h2c0 4.42-3.58 8-8 8s-8-3.58-8-8 3.58-8 8-8z"/></svg>
+    <span>+10s</span>
+  </div>
+
+  <!-- Play/Pause center icon -->
+  <div class="center-play" id="centerPlay">
+    <svg viewBox="0 0 24 24" id="centerIcon"><path d="M8 5v14l11-7z"/></svg>
+  </div>
+
+  <!-- Source badge -->
+  <div class="src-badge" id="srcBadge"></div>
+
+  <!-- VIDEO -->
+  <video id="vid" playsinline></video>
+
+  <!-- CONTROLS -->
+  <div class="ctrl" id="ctrlBar">
+    <!-- Progress -->
+    <div class="prog-wrap" id="progWrap">
+      <div class="prog-bg"></div>
+      <div class="prog-buf" id="progBuf"></div>
+      <div class="prog-fill" id="progFill"></div>
+      <div class="prog-dot" id="progDot"></div>
+      <div class="prog-time" id="progTime"></div>
+    </div>
+    <!-- Buttons -->
+    <div class="ctrl-row">
+      <!-- Play/Pause -->
+      <button class="cbtn" id="playBtn" title="Play/Pause">
+        <svg viewBox="0 0 24 24" id="playIcon"><path d="M8 5v14l11-7z"/></svg>
+      </button>
+      <!-- -10s -->
+      <button class="cbtn" id="backBtn" title="-10s">
+        <svg viewBox="0 0 24 24"><path d="M12 5V1L7 6l5 5V7c3.31 0 6 2.69 6 6s-2.69 6-6 6-6-2.69-6-6H4c0 4.42 3.58 8 8 8s8-3.58 8-8-3.58-8-8-8z"/><text x="9" y="16" font-size="6" fill="white">10</text></svg>
+      </button>
+      <!-- +10s -->
+      <button class="cbtn" id="fwdBtn" title="+10s">
+        <svg viewBox="0 0 24 24"><path d="M12 5V1l5 5-5 5V7c-3.31 0-6 2.69-6 6s2.69 6 6 6 6-2.69 6-6h2c0 4.42-3.58 8-8 8s-8-3.58-8-8 3.58-8 8-8z"/><text x="9" y="16" font-size="6" fill="white">10</text></svg>
+      </button>
+      <!-- Volume -->
+      <div class="vol-wrap">
+        <button class="cbtn" id="muteBtn" title="Mute">
+          <svg viewBox="0 0 24 24" id="volIcon"><path d="M3 9v6h4l5 5V4L7 9H3zm13.5 3c0-1.77-1.02-3.29-2.5-4.03v8.05c1.48-.73 2.5-2.25 2.5-4.02z"/></svg>
+        </button>
+        <input type="range" class="vol-slider" id="volSlider" min="0" max="100" value="100"/>
+      </div>
+      <!-- Time -->
+      <span class="time-txt" id="timeTxt">0:00 / 0:00</span>
+      <div class="spacer"></div>
+      <!-- Legendas/Idioma/Qualidade -->
+      <div class="menu-btn">
+        <button class="cbtn" id="menuBtn" title="Configurações">
+          <svg viewBox="0 0 24 24"><path d="M19.14,12.94c0.04-0.3,0.06-0.61,0.06-0.94c0-0.32-0.02-0.64-0.07-0.94l2.03-1.58c0.18-0.14,0.23-0.41,0.12-0.61 l-1.92-3.32c-0.12-0.22-0.37-0.29-0.59-0.22l-2.39,0.96c-0.5-0.38-1.03-0.7-1.62-0.94L14.4,2.81c-0.04-0.24-0.24-0.41-0.48-0.41 h-3.84c-0.24,0-0.43,0.17-0.47,0.41L9.25,5.35C8.66,5.59,8.12,5.92,7.63,6.29L5.24,5.33c-0.22-0.08-0.47,0-0.59,0.22L2.74,8.87 C2.62,9.08,2.66,9.34,2.86,9.48l2.03,1.58C4.84,11.36,4.8,11.69,4.8,12s0.02,0.64,0.07,0.94l-2.03,1.58 c-0.18,0.14-0.23,0.41-0.12,0.61l1.92,3.32c0.12,0.22,0.37,0.29,0.59,0.22l2.39-0.96c0.5,0.38,1.03,0.7,1.62,0.94l0.36,2.54 c0.05,0.24,0.24,0.41,0.48,0.41h3.84c0.24,0,0.44-0.17,0.47-0.41l0.36-2.54c0.59-0.24,1.13-0.56,1.62-0.94l2.39,0.96 c0.22,0.08,0.47,0,0.59-0.22l1.92-3.32c0.12-0.22,0.07-0.47-0.12-0.61L19.14,12.94z M12,15.6c-1.98,0-3.6-1.62-3.6-3.6 s1.62-3.6,3.6-3.6s3.6,1.62,3.6,3.6S13.98,15.6,12,15.6z"/></svg>
+        </button>
+        <div class="dropdown" id="dropdown">
+          <div class="dd-section">Idioma</div>
+          <div class="dd-item on" data-lang="pt" onclick="setLang('pt',this)"><span>🇧🇷 Português</span><span class="check">✓</span></div>
+          <div class="dd-item" data-lang="en" onclick="setLang('en',this)"><span>🇺🇸 Inglês</span><span class="check">✓</span></div>
+          <div class="dd-item" data-lang="es" onclick="setLang('es',this)"><span>🇪🇸 Espanhol</span><span class="check">✓</span></div>
+          <div class="dd-sep"></div>
+          <div class="dd-section">Legenda</div>
+          <div class="dd-item on" data-sub="pt" onclick="setSub('pt',this)"><span>🇧🇷 Português</span><span class="check">✓</span></div>
+          <div class="dd-item" data-sub="en" onclick="setSub('en',this)"><span>🇺🇸 Inglês</span><span class="check">✓</span></div>
+          <div class="dd-item" data-sub="off" onclick="setSub('off',this)"><span>⊘ Desligada</span><span class="check">✓</span></div>
+          <div class="dd-sep"></div>
+          <div class="dd-section">Velocidade</div>
+          <div class="dd-item" data-spd="0.5" onclick="setSpd(0.5,this)"><span>0.5×</span><span class="check">✓</span></div>
+          <div class="dd-item" data-spd="1" onclick="setSpd(1,this)"><span>Normal</span><span class="check">✓</span></div>
+          <div class="dd-item on" data-spd="1" onclick="setSpd(1,this)"><span>1×</span><span class="check">✓</span></div>
+          <div class="dd-item" data-spd="1.25" onclick="setSpd(1.25,this)"><span>1.25×</span><span class="check">✓</span></div>
+          <div class="dd-item" data-spd="1.5" onclick="setSpd(1.5,this)"><span>1.5×</span><span class="check">✓</span></div>
+          <div class="dd-item" data-spd="2" onclick="setSpd(2,this)"><span>2×</span><span class="check">✓</span></div>
+        </div>
+      </div>
+      <!-- Fullscreen -->
+      <button class="cbtn" id="fsBtn" title="Tela cheia">
+        <svg viewBox="0 0 24 24" id="fsIcon"><path d="M7 14H5v5h5v-2H7v-3zm-2-4h2V7h3V5H5v5zm12 7h-3v2h5v-5h-2v3zM14 5v2h3v3h2V5h-5z"/></svg>
+      </button>
+    </div>
+  </div>
 </div>
 
+<!-- HLS.js -->
+<script src="https://cdn.jsdelivr.net/npm/hls.js@1.5.7/dist/hls.min.js"></script>
 <script>
-const q     = new URLSearchParams(location.search);
-const ID    = q.get('id')    || '';
-const TYPE  = q.get('type')  || 'movie';
-const SEA   = q.get('sea')   || '1';
-const EP    = q.get('ep')    || '1';
-const TITLE = q.get('title') || '';
+const qp    = new URLSearchParams(location.search);
+const ID    = qp.get('id')    || '';
+const TYPE  = qp.get('type')  || 'movie';
+const SEA   = parseInt(qp.get('sea') || '1');
+const EP    = parseInt(qp.get('ep')  || '1');
+const TITLE = qp.get('title') || '';
 
 document.getElementById('ttl').textContent = TITLE;
 document.title = '▶ ' + TITLE + ' — Filmix';
 
-/* ── FONTES ─────────────────────────────────────────────
-   Ordem testada: as mais permissivas primeiro.
-   Para séries/animes usa endpoints específicos de TV.
-──────────────────────────────────────────────────────── */
-function urls(id, type, sea, ep) {
-  if (type === 'tv') return [
-    `https://vidsrc.xyz/embed/tv?tmdb=${id}&season=${sea}&episode=${ep}`,
-    `https://vidsrc.to/embed/tv/${id}/${sea}/${ep}`,
-    `https://vidsrc.me/embed/tv?tmdb=${id}&season=${sea}&episode=${ep}`,
-    `https://multiembed.mov/?video_id=${id}&tmdb=1&s=${sea}&e=${ep}`,
-    `https://autoembed.co/tv/tmdb/${id}-${sea}-${ep}`,
-    `https://embed.su/embed/tv/${id}/${sea}/${ep}`,
-    `https://www.2embed.cc/embedtvfull/${id}&s=${sea}&e=${ep}`,
-  ];
+// ══════════════════════════════════════════════
+// FONTES DE VÍDEO DIRETO (HLS .m3u8)
+// Estas APIs retornam stream direto — sem iframe
+// ══════════════════════════════════════════════
+let currentLang = 'pt';
+let currentSub  = 'pt';
+
+function getStreamUrl(lang) {
+  // VidSrc API — retorna JSON com link HLS direto
+  // Fallback: autoembed com lang param
+  if (TYPE === 'tv') {
+    return [
+      `https://vidsrc.xyz/embed/tv?tmdb=${ID}&season=${SEA}&episode=${EP}&ds_lang=${lang}`,
+      `https://autoembed.co/tv/tmdb/${ID}-${SEA}-${EP}?lang=${lang}`,
+    ];
+  }
   return [
-    `https://vidsrc.xyz/embed/movie?tmdb=${id}`,
-    `https://vidsrc.to/embed/movie/${id}`,
-    `https://vidsrc.me/embed/movie?tmdb=${id}`,
-    `https://multiembed.mov/?video_id=${id}&tmdb=1`,
-    `https://autoembed.co/movie/tmdb/${id}`,
-    `https://embed.su/embed/movie/${id}`,
-    `https://www.2embed.cc/embed/${id}`,
+    `https://vidsrc.xyz/embed/movie?tmdb=${ID}&ds_lang=${lang}`,
+    `https://autoembed.co/movie/tmdb/${ID}?lang=${lang}`,
   ];
 }
 
-const SRCS   = urls(ID, TYPE, SEA, EP);
-const LABELS = ['VidSrc','VidSrc 2','VidSrc.me','MultiEmbed','AutoEmbed','Embed.su','2Embed'];
+// API que retorna HLS direto via CORS-friendly endpoint
+const HLS_APIS = [
+  // VidSrc Pro API (JSON com m3u8)
+  id => TYPE==='tv'
+    ? `https://vidsrc.pro/embed/tv/${id}/${SEA}/${EP}`
+    : `https://vidsrc.pro/embed/movie/${id}`,
+  // Superembed HLS
+  id => TYPE==='tv'
+    ? `https://multiembed.mov/directstream.php?video_id=${id}&tmdb=1&s=${SEA}&e=${EP}`
+    : `https://multiembed.mov/directstream.php?video_id=${id}&tmdb=1`,
+];
 
-const fr    = document.getElementById('fr');
-const ld    = document.getElementById('ld');
-const ldT   = document.getElementById('ldT');
-const ldS   = document.getElementById('ldS');
-const bar   = document.getElementById('srcBar');
+// ══════════════════════════════════════════════
+// ELEMENTOS
+// ══════════════════════════════════════════════
+const vid       = document.getElementById('vid');
+const ld        = document.getElementById('ld');
+const ldT       = document.getElementById('ldT');
+const ldS       = document.getElementById('ldS');
+const spin      = document.getElementById('spin');
+const playBtn   = document.getElementById('playBtn');
+const playIcon  = document.getElementById('playIcon');
+const backBtn   = document.getElementById('backBtn');
+const fwdBtn    = document.getElementById('fwdBtn');
+const muteBtn   = document.getElementById('muteBtn');
+const volIcon   = document.getElementById('volIcon');
+const volSlider = document.getElementById('volSlider');
+const timeTxt   = document.getElementById('timeTxt');
+const progWrap  = document.getElementById('progWrap');
+const progFill  = document.getElementById('progFill');
+const progBuf   = document.getElementById('progBuf');
+const progDot   = document.getElementById('progDot');
+const progTime  = document.getElementById('progTime');
+const fsBtn     = document.getElementById('fsBtn');
+const fsIcon    = document.getElementById('fsIcon');
+const topBar    = document.getElementById('topBar');
+const ctrlBar   = document.getElementById('ctrlBar');
+const pw        = document.getElementById('pw');
+const menuBtn   = document.getElementById('menuBtn');
+const dropdown  = document.getElementById('dropdown');
+const srcBadge  = document.getElementById('srcBadge');
+const centerPlay= document.getElementById('centerPlay');
+const centerIcon= document.getElementById('centerIcon');
+const skipL     = document.getElementById('skipL');
+const skipR     = document.getElementById('skipR');
 
-let cur = 0, timer = null, checking = false;
+// ══════════════════════════════════════════════
+// HLS PLAYER
+// ══════════════════════════════════════════════
+let hls = null;
+let srcIdx = 0;
 
-/* ── Barra de fontes ─────────────────────────────────── */
-bar.innerHTML = SRCS.map((_, i) =>
-  `<button class="src-btn ${i===0?'on':''}" id="b${i}" onclick="load(${i})">${LABELS[i]||'Fonte '+(i+1)}</button>`
-).join('');
+// Tenta carregar HLS direto; se falhar usa iframe AutoEmbed
+async function tryHLS(idx) {
+  if (idx >= HLS_APIS.length) {
+    // Fallback: usa AutoEmbed como iframe dentro do video (último recurso)
+    useEmbedFallback();
+    return;
+  }
 
-/* ── Anti popup ──────────────────────────────────────── */
-window.open = () => null;
-window.addEventListener('blur', () => { if (!checking) setTimeout(() => window.focus?.(), 50); });
-
-/* ── Carrega fonte ───────────────────────────────────── */
-function load(i) {
-  if (i >= SRCS.length) { fail(); return; }
-  cur = i;
-  clearTimeout(timer);
-  checking = false;
-
-  // UI
-  document.querySelectorAll('.src-btn').forEach((b, j) => b.classList.toggle('on', j === i));
+  const url = HLS_APIS[idx](ID);
+  ldT.textContent = 'Conectando…';
+  ldS.textContent = 'Buscando stream de vídeo';
+  spin.style.display = 'block';
   ld.classList.remove('off');
-  ld.querySelector('.spin').style.display = 'block';
-  ldT.textContent = `Conectando a ${LABELS[i]||'fonte '+(i+1)}…`;
-  ldS.textContent = 'Aguarde alguns segundos';
-  const rb = ld.querySelector('.retry');
-  if (rb) rb.remove();
 
-  // Carrega o iframe
-  fr.src = 'about:blank';
-  setTimeout(() => { fr.src = SRCS[i]; }, 80);
-
-  /* Estratégia de detecção:
-     - onload dispara SEMPRE (mesmo em páginas de erro ou bloqueio)
-     - Se der SecurityError ao tentar acessar contentDocument → cross-origin → carregou algo
-     - Se não der erro → mesmo domínio ou about:blank → provavelmente vazio/erro
-     - Timeout de 10s como fallback
-  */
-  fr.onload = () => {
-    checking = true;
-    clearTimeout(timer);
-    let ok = false;
-    try {
-      // Tenta acessar o documento do iframe
-      const doc = fr.contentDocument || fr.contentWindow?.document;
-      const html = doc?.documentElement?.innerHTML || '';
-      // Se chegou aqui: ou é about:blank, ou same-origin com conteúdo
-      ok = html.length > 500 && !html.includes('</body></html>\n') && html !== '<head></head><body></body>';
-    } catch (e) {
-      // SecurityError = conteúdo cross-origin foi carregado = SUCESSO
-      ok = e.name === 'SecurityError' || e instanceof DOMException;
-    }
-
-    if (ok) {
-      success();
-    } else {
-      // Iframe vazio ou bloqueou: espera mais 3s antes de desistir
-      timer = setTimeout(() => {
-        let ok2 = false;
-        try {
-          const doc = fr.contentDocument || fr.contentWindow?.document;
-          ok2 = (doc?.documentElement?.innerHTML?.length || 0) > 500;
-        } catch(e) { ok2 = true; }
-        ok2 ? success() : load(i + 1);
-      }, 3000);
-    }
-    checking = false;
-  };
-
-  fr.onerror = () => { clearTimeout(timer); load(i + 1); };
-
-  // Timeout principal: 10s
-  timer = setTimeout(() => {
-    let ok = false;
-    try {
-      const doc = fr.contentDocument || fr.contentWindow?.document;
-      ok = (doc?.documentElement?.innerHTML?.length || 0) > 500;
-    } catch(e) { ok = true; }
-    ok ? success() : load(i + 1);
-  }, 10000);
-}
-
-function success() {
-  clearTimeout(timer);
-  ldT.textContent = '▶ Reproduzindo';
-  ldS.textContent = '';
-  ld.querySelector('.spin').style.display = 'none';
-  setTimeout(() => ld.classList.add('off'), 800);
-}
-
-function fail() {
-  ld.querySelector('.spin').style.display = 'none';
-  ldT.textContent = '😔 Nenhuma fonte disponível';
-  ldS.textContent = 'Este conteúdo não está disponível agora.\nTente mais tarde ou escolha outro.';
-  if (!ld.querySelector('.retry')) {
-    const btn = document.createElement('button');
-    btn.className = 'retry';
-    btn.textContent = 'Tentar novamente';
-    btn.onclick = () => load(0);
-    ld.appendChild(btn);
+  // Tenta buscar a URL e ver se é um HLS válido
+  try {
+    const res = await fetch(url, {
+      method: 'HEAD',
+      mode: 'no-cors',
+      signal: AbortSignal.timeout(5000),
+    });
+    // no-cors não dá status, mas se chegar aqui é sinal de vida
+    loadHLS(url);
+  } catch(e) {
+    // Tenta mesmo assim — HEAD pode falhar mas GET funcionar
+    loadHLS(url);
   }
 }
 
-// Inicia
-if (ID) load(0);
-else { ldT.textContent = 'ID não informado'; ldS.textContent = ''; }
+function loadHLS(url) {
+  if (hls) { hls.destroy(); hls = null; }
+
+  if (Hls.isSupported()) {
+    hls = new Hls({
+      enableWorker: true,
+      lowLatencyMode: false,
+      backBufferLength: 60,
+    });
+    hls.loadSource(url);
+    hls.attachMedia(vid);
+    hls.on(Hls.Events.MANIFEST_PARSED, () => {
+      onLoaded();
+      vid.play().catch(()=>{});
+    });
+    hls.on(Hls.Events.ERROR, (e, data) => {
+      if (data.fatal) {
+        srcIdx++;
+        if (srcIdx < HLS_APIS.length) tryHLS(srcIdx);
+        else useEmbedFallback();
+      }
+    });
+  } else if (vid.canPlayType('application/vnd.apple.mpegurl')) {
+    // Safari nativo
+    vid.src = url;
+    vid.addEventListener('loadedmetadata', onLoaded, {once:true});
+    vid.addEventListener('error', () => {
+      srcIdx++;
+      if (srcIdx < HLS_APIS.length) tryHLS(srcIdx);
+      else useEmbedFallback();
+    }, {once:true});
+    vid.play().catch(()=>{});
+  } else {
+    useEmbedFallback();
+  }
+}
+
+// ══════════════════════════════════════════════
+// FALLBACK: AutoEmbed como iframe (sem controles customizados)
+// mas com nossa interface por cima
+// ══════════════════════════════════════════════
+let embedFrame = null;
+function useEmbedFallback() {
+  if (hls) { hls.destroy(); hls = null; }
+
+  ldT.textContent = 'Carregando player…';
+  ldS.textContent = 'Usando player alternativo';
+
+  // Esconde o video nativo
+  vid.style.display = 'none';
+
+  // Cria iframe do AutoEmbed
+  if (embedFrame) embedFrame.remove();
+  embedFrame = document.createElement('iframe');
+  embedFrame.style.cssText = 'position:absolute;inset:0;width:100%;height:100%;border:none;z-index:1';
+  embedFrame.allowFullscreen = true;
+  embedFrame.setAttribute('allow','autoplay;fullscreen;encrypted-media');
+  embedFrame.referrerPolicy = 'no-referrer';
+  embedFrame.setAttribute('sandbox','allow-scripts allow-same-origin allow-forms allow-popups allow-presentation allow-top-navigation-by-user-activation');
+
+  const lang = currentLang;
+  if (TYPE === 'tv') {
+    embedFrame.src = `https://autoembed.co/tv/tmdb/${ID}-${SEA}-${EP}?lang=${lang}`;
+  } else {
+    embedFrame.src = `https://autoembed.co/movie/tmdb/${ID}?lang=${lang}`;
+  }
+
+  pw.insertBefore(embedFrame, ld);
+
+  embedFrame.onload = () => {
+    let hasContent = false;
+    try {
+      const doc = embedFrame.contentDocument;
+      hasContent = (doc?.body?.innerHTML?.length || 0) > 200;
+    } catch(e) {
+      hasContent = true; // cross-origin = carregou
+    }
+    if (hasContent) {
+      onLoaded();
+      showBadge('AutoEmbed');
+      // Esconde nossos controles pois o iframe tem os próprios
+      ctrlBar.style.display = 'none';
+      showMsg('▶ Player carregado — use os controles do vídeo');
+    } else {
+      showFail();
+    }
+  };
+
+  embedFrame.onerror = () => showFail();
+
+  setTimeout(() => {
+    if (!ld.classList.contains('off')) {
+      let ok = false;
+      try {
+        ok = (embedFrame.contentDocument?.body?.innerHTML?.length||0) > 200;
+      } catch(e) { ok = true; }
+      ok ? (onLoaded(), showBadge('AutoEmbed'), ctrlBar.style.display='none') : showFail();
+    }
+  }, 12000);
+}
+
+function onLoaded() {
+  ldT.textContent = '▶ Reproduzindo';
+  ldS.textContent = '';
+  spin.style.display = 'none';
+  setTimeout(() => ld.classList.add('off'), 600);
+}
+
+function showFail() {
+  spin.style.display = 'none';
+  ldT.textContent = '😔 Não disponível';
+  ldS.textContent = 'Este título não está disponível no momento.\nTítulos populares têm maior cobertura.';
+  const existing = ld.querySelector('.ld-retry');
+  if (!existing) {
+    const btn = document.createElement('button');
+    btn.className = 'ld-retry';
+    btn.textContent = 'Tentar novamente';
+    btn.onclick = () => { srcIdx=0; tryHLS(0); };
+    ld.appendChild(btn);
+  }
+  ld.classList.remove('off');
+}
+
+function showMsg(msg) {
+  ldT.textContent = msg;
+  ldS.textContent = '';
+  spin.style.display = 'none';
+  setTimeout(() => ld.classList.add('off'), 1500);
+  ld.classList.remove('off');
+}
+
+function showBadge(name) {
+  srcBadge.textContent = '▶ ' + name;
+  srcBadge.classList.add('show');
+  setTimeout(() => srcBadge.classList.remove('show'), 2500);
+}
+
+// ══════════════════════════════════════════════
+// CONTROLES DO VIDEO NATIVO
+// ══════════════════════════════════════════════
+
+// Play / Pause
+function togglePlay() {
+  if (!vid.src && !vid.currentSrc) return;
+  if (vid.paused) { vid.play(); showCenterIcon(false); }
+  else { vid.pause(); showCenterIcon(true); }
+}
+playBtn.onclick = togglePlay;
+vid.onclick = togglePlay;
+
+function showCenterIcon(isPaused) {
+  centerIcon.innerHTML = isPaused
+    ? '<path d="M8 5v14l11-7z"/>'
+    : '<path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/>';
+  centerPlay.classList.add('show');
+  setTimeout(() => centerPlay.classList.remove('show'), 600);
+}
+
+vid.addEventListener('play',  () => { playIcon.innerHTML='<path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/>'; });
+vid.addEventListener('pause', () => { playIcon.innerHTML='<path d="M8 5v14l11-7z"/>'; });
+vid.addEventListener('waiting',() => { if(!ld.classList.contains('off')){} });
+vid.addEventListener('canplay',() => { ld.classList.add('off'); });
+
+// Skip -10 / +10
+backBtn.onclick = () => { vid.currentTime = Math.max(0, vid.currentTime-10); showSkip(false); };
+fwdBtn.onclick  = () => { vid.currentTime = Math.min(vid.duration||99999, vid.currentTime+10); showSkip(true); };
+let skipTimer = null;
+function showSkip(right) {
+  const el = right ? skipR : skipL;
+  el.classList.add('show');
+  clearTimeout(skipTimer);
+  skipTimer = setTimeout(() => el.classList.remove('show'), 600);
+}
+
+// Double-tap para skip no mobile
+let tapTimer = null, tapCount = 0, tapSide = null;
+pw.addEventListener('touchend', e => {
+  if (e.target.closest('.ctrl') || e.target.closest('.top') || e.target.closest('.dropdown')) return;
+  const x = e.changedTouches[0].clientX;
+  const side = x < window.innerWidth/2 ? 'left' : 'right';
+  tapCount++;
+  tapSide = side;
+  clearTimeout(tapTimer);
+  tapTimer = setTimeout(() => {
+    if (tapCount === 1) {
+      // single tap = toggle controls
+      toggleBars();
+    } else if (tapCount >= 2) {
+      if (side === 'left') { vid.currentTime = Math.max(0, vid.currentTime-10); showSkip(false); }
+      else { vid.currentTime = Math.min(vid.duration||99999, vid.currentTime+10); showSkip(true); }
+    }
+    tapCount = 0;
+  }, 280);
+});
+
+// Volume
+muteBtn.onclick = () => {
+  vid.muted = !vid.muted;
+  volSlider.value = vid.muted ? 0 : Math.round(vid.volume*100);
+  updateVolIcon();
+};
+volSlider.oninput = e => {
+  vid.volume = e.target.value / 100;
+  vid.muted = vid.volume === 0;
+  updateVolIcon();
+};
+function updateVolIcon() {
+  const v = vid.muted ? 0 : vid.volume;
+  volIcon.innerHTML = v === 0
+    ? '<path d="M16.5 12c0-1.77-1.02-3.29-2.5-4.03v2.21l2.45 2.45c.03-.2.05-.41.05-.63zm2.5 0c0 .94-.2 1.82-.54 2.64l1.51 1.51C20.63 14.91 21 13.5 21 12c0-4.28-2.99-7.86-7-8.77v2.06c2.89.86 5 3.54 5 6.71zM4.27 3L3 4.27 7.73 9H3v6h4l5 5v-6.73l4.25 4.25c-.67.52-1.42.93-2.25 1.18v2.06c1.38-.31 2.63-.95 3.69-1.81L19.73 21 21 19.73l-9-9L4.27 3zM12 4L9.91 6.09 12 8.18V4z"/>'
+    : v < 0.5
+    ? '<path d="M18.5 12c0-1.77-1.02-3.29-2.5-4.03v8.05c1.48-.73 2.5-2.25 2.5-4.02zM5 9v6h4l5 5V4L9 9H5z"/>'
+    : '<path d="M3 9v6h4l5 5V4L7 9H3zm13.5 3c0-1.77-1.02-3.29-2.5-4.03v8.05c1.48-.73 2.5-2.25 2.5-4.02zM14 3.23v2.06c2.89.86 5 3.54 5 6.71s-2.11 5.85-5 6.71v2.06c4.01-.91 7-4.49 7-8.77s-2.99-7.86-7-8.77z"/>';
+}
+
+// Progresso
+vid.addEventListener('timeupdate', updateProgress);
+vid.addEventListener('progress', updateBuffer);
+function updateProgress() {
+  if (!vid.duration) return;
+  const pct = (vid.currentTime / vid.duration) * 100;
+  progFill.style.width = pct + '%';
+  progDot.style.left   = pct + '%';
+  timeTxt.textContent  = fmt(vid.currentTime) + ' / ' + fmt(vid.duration);
+}
+function updateBuffer() {
+  if (!vid.duration || !vid.buffered.length) return;
+  const pct = (vid.buffered.end(vid.buffered.length-1) / vid.duration) * 100;
+  progBuf.style.width = pct + '%';
+}
+function fmt(s) {
+  if (isNaN(s)) return '0:00';
+  const h = Math.floor(s/3600), m = Math.floor((s%3600)/60), sec = Math.floor(s%60);
+  return h > 0 ? `${h}:${String(m).padStart(2,'0')}:${String(sec).padStart(2,'0')}` : `${m}:${String(sec).padStart(2,'0')}`;
+}
+
+// Seek
+let seeking = false;
+function seekTo(e) {
+  const rect = progWrap.getBoundingClientRect();
+  const pct = Math.max(0, Math.min(1, (e.clientX - rect.left) / rect.width));
+  if (vid.duration) vid.currentTime = pct * vid.duration;
+}
+progWrap.addEventListener('mousedown', e => { seeking=true; seekTo(e); });
+document.addEventListener('mousemove', e => { if(seeking) seekTo(e); });
+document.addEventListener('mouseup',   () => { seeking=false; });
+progWrap.addEventListener('touchstart', e => { seeking=true; seekTo(e.touches[0]); e.preventDefault(); }, {passive:false});
+document.addEventListener('touchmove',  e => { if(seeking) seekTo(e.touches[0]); }, {passive:true});
+document.addEventListener('touchend',   () => { seeking=false; });
+
+// Hover time on progress
+progWrap.addEventListener('mousemove', e => {
+  const rect = progWrap.getBoundingClientRect();
+  const pct = Math.max(0, Math.min(1, (e.clientX - rect.left) / rect.width));
+  progTime.style.left = (pct*100) + '%';
+  progTime.style.display = 'block';
+  if (vid.duration) progTime.textContent = fmt(pct * vid.duration);
+});
+progWrap.addEventListener('mouseleave', () => { progTime.style.display = 'none'; });
+
+// Fullscreen
+fsBtn.onclick = () => {
+  if (!document.fullscreenElement) {
+    (pw.requestFullscreen||pw.webkitRequestFullscreen||pw.mozRequestFullScreen).call(pw);
+  } else {
+    (document.exitFullscreen||document.webkitExitFullscreen||document.mozCancelFullScreen).call(document);
+  }
+};
+document.addEventListener('fullscreenchange', () => {
+  const fs = !!document.fullscreenElement;
+  fsIcon.innerHTML = fs
+    ? '<path d="M5 16h3v3h2v-5H5v2zm3-8H5v2h5V5H8v3zm6 11h2v-3h3v-2h-5v5zm2-11V5h-2v5h5V8h-3z"/>'
+    : '<path d="M7 14H5v5h5v-2H7v-3zm-2-4h2V7h3V5H5v5zm12 7h-3v2h5v-5h-2v3zM14 5v2h3v3h2V5h-5z"/>';
+});
+
+// Auto-hide controls
+let hideTimer = null;
+function resetHide() {
+  pw.classList.add('show-cursor');
+  topBar.classList.remove('hide');
+  ctrlBar.classList.remove('hide');
+  clearTimeout(hideTimer);
+  if (!vid.paused && !dropdown.classList.contains('open')) {
+    hideTimer = setTimeout(() => {
+      topBar.classList.add('hide');
+      ctrlBar.classList.add('hide');
+      pw.classList.remove('show-cursor');
+    }, 3500);
+  }
+}
+function toggleBars() {
+  const hidden = topBar.classList.contains('hide');
+  if (hidden) resetHide();
+  else {
+    topBar.classList.add('hide');
+    ctrlBar.classList.add('hide');
+  }
+}
+document.addEventListener('mousemove', resetHide);
+document.addEventListener('keydown', e => {
+  if (e.code==='Space') { e.preventDefault(); togglePlay(); resetHide(); }
+  if (e.code==='ArrowRight') { fwdBtn.click(); resetHide(); }
+  if (e.code==='ArrowLeft')  { backBtn.click(); resetHide(); }
+  if (e.code==='KeyF') fsBtn.click();
+  if (e.code==='KeyM') muteBtn.click();
+});
+
+// Dropdown menu
+menuBtn.onclick = e => { e.stopPropagation(); dropdown.classList.toggle('open'); resetHide(); };
+document.addEventListener('click', () => dropdown.classList.remove('open'));
+dropdown.addEventListener('click', e => e.stopPropagation());
+
+// ══════════════════════════════════════════════
+// IDIOMA / LEGENDA / VELOCIDADE
+// ══════════════════════════════════════════════
+window.setLang = function(lang, el) {
+  currentLang = lang;
+  document.querySelectorAll('[data-lang]').forEach(x => x.classList.remove('on'));
+  el.classList.add('on');
+  dropdown.classList.remove('open');
+  // Recarrega com novo idioma
+  srcIdx = 0;
+  if (embedFrame) {
+    const s = TYPE==='tv'
+      ? `https://autoembed.co/tv/tmdb/${ID}-${SEA}-${EP}?lang=${lang}`
+      : `https://autoembed.co/movie/tmdb/${ID}?lang=${lang}`;
+    embedFrame.src = s;
+    showMsg('Trocando idioma…');
+  } else {
+    tryHLS(0);
+  }
+};
+
+window.setSub = function(sub, el) {
+  currentSub = sub;
+  document.querySelectorAll('[data-sub]').forEach(x => x.classList.remove('on'));
+  el.classList.add('on');
+  dropdown.classList.remove('open');
+  // Para o video nativo, controla as tracks
+  if (vid.textTracks.length) {
+    for (let t of vid.textTracks) {
+      if (sub === 'off') t.mode = 'disabled';
+      else t.mode = t.language === sub ? 'showing' : 'disabled';
+    }
+  }
+};
+
+window.setSpd = function(spd, el) {
+  vid.playbackRate = spd;
+  document.querySelectorAll('[data-spd]').forEach(x => x.classList.remove('on'));
+  el.classList.add('on');
+  dropdown.classList.remove('open');
+};
+
+// Anti-popup
+window.open = () => null;
+
+// ══════════════════════════════════════════════
+// INICIA
+// ══════════════════════════════════════════════
+if (ID) {
+  tryHLS(0);
+} else {
+  spin.style.display='none';
+  ldT.textContent = 'ID não informado';
+  ldS.textContent = '';
+}
 </script>
 </body>
 </html>
