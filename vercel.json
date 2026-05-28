@@ -1,14 +1,13 @@
 {
-  "rewrites": [
-    { "source": "/api/proxy", "destination": "/api/proxy" },
-    { "source": "/player", "destination": "/player.html" },
-    { "source": "/", "destination": "/index.html" }
-  ],
+  "cleanUrls": true,
+  "trailingSlash": false,
   "headers": [
     {
-      "source": "/api/(.*)",
+      "source": "/(.*)",
       "headers": [
-        { "key": "Access-Control-Allow-Origin", "value": "*" }
+        { "key": "X-Content-Type-Options", "value": "nosniff" },
+        { "key": "Referrer-Policy", "value": "no-referrer" },
+        { "key": "Permissions-Policy", "value": "interest-cohort=()" }
       ]
     }
   ]
