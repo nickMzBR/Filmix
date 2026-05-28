@@ -6,281 +6,211 @@
 <title>Filmix Player</title>
 <style>
 *{margin:0;padding:0;box-sizing:border-box}
-html,body{height:100%;background:#000;color:#fff;font-family:sans-serif;overflow:hidden}
+html,body{height:100%;background:#000;color:#fff;font-family:sans-serif}
 body{display:flex;flex-direction:column}
-.top{display:flex;align-items:center;gap:12px;padding:10px 18px;background:#0a0a0a;border-bottom:1px solid #1a1a1a;flex-shrink:0;z-index:50}
+
+.top{display:flex;align-items:center;gap:12px;padding:10px 16px;background:#0a0a0a;border-bottom:1px solid #1a1a1a;flex-shrink:0}
 .back{display:flex;align-items:center;gap:6px;padding:7px 14px;background:#1e1e1e;color:#fff;border:none;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer}
 .back:hover{background:#2563eb}
-.logo{font-size:18px;font-weight:700;letter-spacing:2px;flex-shrink:0}.logo span{color:#2563eb}
-.ttl{font-size:13px;font-weight:600;flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:#aaa}
+.logo{font-size:18px;font-weight:700;letter-spacing:2px}.logo span{color:#2563eb}
+.ttl{font-size:13px;color:#aaa;flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 
-/* Troca de servidor — barra discreta */
-.srv-bar{display:flex;align-items:center;gap:6px;padding:7px 18px;background:#0d0d0d;border-bottom:1px solid #161616;flex-shrink:0;overflow-x:auto;scrollbar-width:none}
-.srv-bar::-webkit-scrollbar{display:none}
-.srv-lbl{font-size:10px;font-weight:700;letter-spacing:1px;color:#444;flex-shrink:0}
-.srv-btn{padding:4px 11px;border-radius:5px;font-size:11px;font-weight:600;border:1px solid #2a2a2a;color:#555;background:transparent;cursor:pointer;transition:.15s;flex-shrink:0}
-.srv-btn:hover{border-color:#2563eb;color:#fff}
-.srv-btn.on{background:#2563eb;border-color:#2563eb;color:#fff}
+/* Seletor de fonte */
+.src-bar{display:flex;gap:0;background:#0d0d0d;border-bottom:1px solid #161616;flex-shrink:0;overflow-x:auto;scrollbar-width:none}
+.src-bar::-webkit-scrollbar{display:none}
+.src-btn{flex-shrink:0;padding:10px 16px;font-size:12px;font-weight:600;color:#555;background:none;border:none;border-bottom:2px solid transparent;cursor:pointer;transition:.15s;white-space:nowrap}
+.src-btn:hover{color:#fff}.src-btn.on{color:#2563eb;border-bottom-color:#2563eb}
 
-/* Área do player */
+/* PLAYER AREA */
 .pw{flex:1;position:relative;background:#000;overflow:hidden}
-#fr{width:100%;height:100%;border:none;display:block}
 
-/* Escudo anti-popup — ativo nos primeiros segundos */
-#shield{position:absolute;inset:0;z-index:10;background:transparent;display:none;cursor:default}
+/* O iframe ocupa 100% — sem pointer-events manipulation */
+#fr{position:absolute;inset:0;width:100%;height:100%;border:none}
 
-/* Loading */
-.ld{position:absolute;inset:0;background:#000;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px;z-index:20;transition:opacity .4s}
+/* Camada de loading sobre o iframe */
+.ld{position:absolute;inset:0;background:#000;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;z-index:5;transition:opacity .5s}
 .ld.off{opacity:0;pointer-events:none}
-.spin{width:48px;height:48px;border-radius:50%;border:3px solid #1e1e1e;border-top-color:#2563eb;animation:spin .9s linear infinite}
-@keyframes spin{to{transform:rotate(360deg)}}
-.ld-txt{font-size:14px;font-weight:600;color:#ccc}
-.ld-sub{font-size:12px;color:#444;text-align:center;max-width:260px;line-height:1.5}
-.ld-prog{width:180px;height:2px;background:#1a1a1a;border-radius:2px;overflow:hidden}
-.ld-pf{height:100%;background:#2563eb;transition:width .5s}
-
-/* Aviso popup bloqueado */
-#adtip{position:absolute;top:8px;right:8px;z-index:30;background:rgba(37,99,235,.9);color:#fff;font-size:11px;font-weight:600;padding:5px 10px;border-radius:6px;opacity:0;transition:opacity .3s;pointer-events:none}
+.spin{width:44px;height:44px;border-radius:50%;border:3px solid #1e1e1e;border-top-color:#2563eb;animation:s .9s linear infinite}
+@keyframes s{to{transform:rotate(360deg)}}
+.ld-t{font-size:14px;font-weight:600;color:#ccc}
+.ld-s{font-size:12px;color:#444;text-align:center;line-height:1.5}
+.retry{margin-top:6px;padding:8px 20px;background:#2563eb;color:#fff;border:none;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer}
+.retry:hover{background:#1d4ed8}
 </style>
 </head>
 <body>
-
 <div class="top">
   <button class="back" onclick="history.back()">← Voltar</button>
   <div class="logo"><span>F</span>ILMIX</div>
   <span class="ttl" id="ttl"></span>
 </div>
 
-<div class="srv-bar" id="srvBar">
-  <span class="srv-lbl">FONTE:</span>
-</div>
+<div class="src-bar" id="srcBar"></div>
 
 <div class="pw">
   <div class="ld" id="ld">
     <div class="spin"></div>
-    <div class="ld-txt" id="ldTxt">Carregando…</div>
-    <div class="ld-sub" id="ldSub">Conectando ao servidor de vídeo</div>
-    <div class="ld-prog"><div class="ld-pf" id="ldPf" style="width:0%"></div></div>
+    <div class="ld-t" id="ldT">Carregando…</div>
+    <div class="ld-s" id="ldS">Aguarde enquanto conectamos ao servidor</div>
   </div>
   <iframe id="fr"
     allowfullscreen
-    allow="autoplay; fullscreen; picture-in-picture; encrypted-media; gyroscope; accelerometer"
+    allow="autoplay; fullscreen; picture-in-picture; encrypted-media; gyroscope; accelerometer; clipboard-write"
     referrerpolicy="no-referrer"
-    sandbox="allow-scripts allow-same-origin allow-forms allow-popups allow-presentation allow-top-navigation-by-user-activation allow-modals">
+    sandbox="allow-scripts allow-same-origin allow-forms allow-popups allow-presentation allow-top-navigation-by-user-activation allow-modals allow-pointer-lock">
   </iframe>
-  <div id="shield"></div>
-  <div id="adtip">🛡️ Popup bloqueado</div>
 </div>
 
 <script>
-const p   = new URLSearchParams(location.search);
-const ID  = p.get('id');
-const TYPE= p.get('type') || 'movie'; // movie | tv
-const SEA = p.get('sea') || '1';
-const EP  = p.get('ep')  || '1';
-const TITLE = p.get('title') || '';
+const q     = new URLSearchParams(location.search);
+const ID    = q.get('id')    || '';
+const TYPE  = q.get('type')  || 'movie';
+const SEA   = q.get('sea')   || '1';
+const EP    = q.get('ep')    || '1';
+const TITLE = q.get('title') || '';
 
 document.getElementById('ttl').textContent = TITLE;
 document.title = '▶ ' + TITLE + ' — Filmix';
 
-// ════════════════════════════════════════
-// FONTES — direto no navegador do usuário
-// Sem proxy = sem bloqueio de servidor
-// ════════════════════════════════════════
-function getSources(id, type, sea, ep) {
-  if (type === 'tv') {
-    return [
-      `https://vidsrc.xyz/embed/tv?tmdb=${id}&season=${sea}&episode=${ep}`,
-      `https://vidsrc.to/embed/tv/${id}/${sea}/${ep}`,
-      `https://vidsrc.me/embed/tv?tmdb=${id}&season=${sea}&episode=${ep}`,
-      `https://embed.su/embed/tv/${id}/${sea}/${ep}`,
-      `https://www.2embed.cc/embedtv/${id}&s=${sea}&e=${ep}`,
-      `https://autoembed.co/tv/tmdb/${id}-${sea}-${ep}`,
-      `https://multiembed.mov/?video_id=${id}&tmdb=1&s=${sea}&e=${ep}`,
-    ];
-  }
+/* ── FONTES ─────────────────────────────────────────────
+   Ordem testada: as mais permissivas primeiro.
+   Para séries/animes usa endpoints específicos de TV.
+──────────────────────────────────────────────────────── */
+function urls(id, type, sea, ep) {
+  if (type === 'tv') return [
+    `https://vidsrc.xyz/embed/tv?tmdb=${id}&season=${sea}&episode=${ep}`,
+    `https://vidsrc.to/embed/tv/${id}/${sea}/${ep}`,
+    `https://vidsrc.me/embed/tv?tmdb=${id}&season=${sea}&episode=${ep}`,
+    `https://multiembed.mov/?video_id=${id}&tmdb=1&s=${sea}&e=${ep}`,
+    `https://autoembed.co/tv/tmdb/${id}-${sea}-${ep}`,
+    `https://embed.su/embed/tv/${id}/${sea}/${ep}`,
+    `https://www.2embed.cc/embedtvfull/${id}&s=${sea}&e=${ep}`,
+  ];
   return [
     `https://vidsrc.xyz/embed/movie?tmdb=${id}`,
     `https://vidsrc.to/embed/movie/${id}`,
     `https://vidsrc.me/embed/movie?tmdb=${id}`,
+    `https://multiembed.mov/?video_id=${id}&tmdb=1`,
+    `https://autoembed.co/movie/tmdb/${id}`,
     `https://embed.su/embed/movie/${id}`,
     `https://www.2embed.cc/embed/${id}`,
-    `https://autoembed.co/movie/tmdb/${id}`,
-    `https://multiembed.mov/?video_id=${id}&tmdb=1`,
   ];
 }
 
-const SOURCES = getSources(ID, TYPE, SEA, EP);
-const LABELS  = ['VidSrc','VidSrc 2','VidSrc.me','Embed.su','2Embed','AutoEmbed','MultiEmbed'];
+const SRCS   = urls(ID, TYPE, SEA, EP);
+const LABELS = ['VidSrc','VidSrc 2','VidSrc.me','MultiEmbed','AutoEmbed','Embed.su','2Embed'];
 
-const fr      = document.getElementById('fr');
-const shield  = document.getElementById('shield');
-const ld      = document.getElementById('ld');
-const ldTxt   = document.getElementById('ldTxt');
-const ldSub   = document.getElementById('ldSub');
-const ldPf    = document.getElementById('ldPf');
-const adtip   = document.getElementById('adtip');
-const srvBar  = document.getElementById('srvBar');
+const fr    = document.getElementById('fr');
+const ld    = document.getElementById('ld');
+const ldT   = document.getElementById('ldT');
+const ldS   = document.getElementById('ldS');
+const bar   = document.getElementById('srcBar');
 
-let cur = 0;
-let loadTimer = null;
-let shieldTimer = null;
-let ready = false;
+let cur = 0, timer = null, checking = false;
 
-// ── Botões de fonte ───────────────────────────────
-srvBar.innerHTML = '<span class="srv-lbl">FONTE:</span>' +
-  SOURCES.map((_, i) =>
-    `<button class="srv-btn ${i===0?'on':''}" id="sb${i}" onclick="switchTo(${i})">${LABELS[i]||'Fonte '+(i+1)}</button>`
-  ).join('');
+/* ── Barra de fontes ─────────────────────────────────── */
+bar.innerHTML = SRCS.map((_, i) =>
+  `<button class="src-btn ${i===0?'on':''}" id="b${i}" onclick="load(${i})">${LABELS[i]||'Fonte '+(i+1)}</button>`
+).join('');
 
-// ── Anti-popup ───────────────────────────────────
-// Sobrescreve window.open para bloquear popups do iframe filho
-window.open = (url) => {
-  showAdTip();
-  return null;
-};
+/* ── Anti popup ──────────────────────────────────────── */
+window.open = () => null;
+window.addEventListener('blur', () => { if (!checking) setTimeout(() => window.focus?.(), 50); });
 
-// Detecta perda de foco (popup em background)
-document.addEventListener('visibilitychange', () => {
-  if (document.hidden && ready) {
-    setTimeout(() => {
-      if (document.hidden) showAdTip();
-    }, 200);
-  }
-});
-window.addEventListener('blur', () => {
-  if (ready) {
-    setTimeout(() => window.focus(), 80);
-    showAdTip();
-  }
-});
+/* ── Carrega fonte ───────────────────────────────────── */
+function load(i) {
+  if (i >= SRCS.length) { fail(); return; }
+  cur = i;
+  clearTimeout(timer);
+  checking = false;
 
-function showAdTip() {
-  adtip.style.opacity = '1';
-  setTimeout(() => adtip.style.opacity = '0', 2000);
-}
-
-// ── Escudo temporário ─────────────────────────────
-// Nos primeiros 4s após carregar, bloqueia o 1º clique (que ativa popup)
-function activateShield() {
-  shield.style.display = 'block';
-  clearTimeout(shieldTimer);
-  shieldTimer = setTimeout(() => {
-    shield.style.display = 'none';
-  }, 4000);
-  // No primeiro clique, remove o escudo e deixa o usuário interagir
-  shield.onclick = () => {
-    shield.style.display = 'none';
-    showAdTip();
-  };
-}
-
-// ── Troca de fonte ───────────────────────────────
-function switchTo(idx) {
-  cur = idx;
-  ready = false;
-  clearTimeout(loadTimer);
-
-  // Atualiza botões
-  document.querySelectorAll('.srv-btn').forEach((b, i) => b.classList.toggle('on', i === idx));
-
-  // Mostra loading
+  // UI
+  document.querySelectorAll('.src-btn').forEach((b, j) => b.classList.toggle('on', j === i));
   ld.classList.remove('off');
-  ldTxt.textContent = `Carregando ${LABELS[idx]||'fonte '+(idx+1)}…`;
-  ldSub.textContent = 'Conectando ao servidor de vídeo';
-  ldPf.style.width = '10%';
+  ld.querySelector('.spin').style.display = 'block';
+  ldT.textContent = `Conectando a ${LABELS[i]||'fonte '+(i+1)}…`;
+  ldS.textContent = 'Aguarde alguns segundos';
+  const rb = ld.querySelector('.retry');
+  if (rb) rb.remove();
 
-  // Progresso animado
-  let prog = 10;
-  const pt = setInterval(() => {
-    prog = Math.min(prog + Math.random() * 15, 85);
-    ldPf.style.width = prog + '%';
-  }, 800);
-
-  // Carrega iframe
+  // Carrega o iframe
   fr.src = 'about:blank';
-  setTimeout(() => {
-    fr.src = SOURCES[idx];
-  }, 120);
+  setTimeout(() => { fr.src = SRCS[i]; }, 80);
 
-  // Detecta carregamento via onload
+  /* Estratégia de detecção:
+     - onload dispara SEMPRE (mesmo em páginas de erro ou bloqueio)
+     - Se der SecurityError ao tentar acessar contentDocument → cross-origin → carregou algo
+     - Se não der erro → mesmo domínio ou about:blank → provavelmente vazio/erro
+     - Timeout de 10s como fallback
+  */
   fr.onload = () => {
-    clearInterval(pt);
-    let loaded = false;
+    checking = true;
+    clearTimeout(timer);
+    let ok = false;
     try {
-      // Se SecurityError → conteúdo cross-origin → carregou!
-      const doc = fr.contentDocument;
-      // Se chegou aqui = same-origin ou vazio
-      loaded = doc && doc.body && doc.body.innerHTML.length > 200;
-    } catch(e) {
-      // SecurityError = cross-origin = carregou com sucesso
-      loaded = true;
+      // Tenta acessar o documento do iframe
+      const doc = fr.contentDocument || fr.contentWindow?.document;
+      const html = doc?.documentElement?.innerHTML || '';
+      // Se chegou aqui: ou é about:blank, ou same-origin com conteúdo
+      ok = html.length > 500 && !html.includes('</body></html>\n') && html !== '<head></head><body></body>';
+    } catch (e) {
+      // SecurityError = conteúdo cross-origin foi carregado = SUCESSO
+      ok = e.name === 'SecurityError' || e instanceof DOMException;
     }
-    if (loaded) {
-      onSuccess();
+
+    if (ok) {
+      success();
     } else {
-      // Iframe vazio = bloqueou o embed, tenta próximo
-      clearInterval(pt);
-      if (idx + 1 < SOURCES.length) {
-        setTimeout(() => switchTo(idx + 1), 500);
-      } else {
-        onFail();
-      }
+      // Iframe vazio ou bloqueou: espera mais 3s antes de desistir
+      timer = setTimeout(() => {
+        let ok2 = false;
+        try {
+          const doc = fr.contentDocument || fr.contentWindow?.document;
+          ok2 = (doc?.documentElement?.innerHTML?.length || 0) > 500;
+        } catch(e) { ok2 = true; }
+        ok2 ? success() : load(i + 1);
+      }, 3000);
     }
+    checking = false;
   };
 
-  fr.onerror = () => {
-    clearInterval(pt);
-    if (idx + 1 < SOURCES.length) {
-      setTimeout(() => switchTo(idx + 1), 500);
-    } else {
-      onFail();
-    }
-  };
+  fr.onerror = () => { clearTimeout(timer); load(i + 1); };
 
-  // Timeout: se não responder em 12s, tenta próximo
-  loadTimer = setTimeout(() => {
-    clearInterval(pt);
-    let loaded = false;
+  // Timeout principal: 10s
+  timer = setTimeout(() => {
+    let ok = false;
     try {
-      const doc = fr.contentDocument;
-      loaded = doc && doc.body && doc.body.innerHTML.length > 200;
-    } catch(e) {
-      loaded = true; // SecurityError = cross-origin = ok
-    }
-    if (loaded) {
-      onSuccess();
-    } else if (idx + 1 < SOURCES.length) {
-      switchTo(idx + 1);
-    } else {
-      onFail();
-    }
-  }, 12000);
+      const doc = fr.contentDocument || fr.contentWindow?.document;
+      ok = (doc?.documentElement?.innerHTML?.length || 0) > 500;
+    } catch(e) { ok = true; }
+    ok ? success() : load(i + 1);
+  }, 10000);
 }
 
-function onSuccess() {
-  ready = true;
-  ldPf.style.width = '100%';
-  ldTxt.textContent = 'Reproduzindo!';
-  ldSub.textContent = '';
-  setTimeout(() => {
-    ld.classList.add('off');
-    activateShield(); // bloqueia primeiro clique (popup)
-  }, 700);
+function success() {
+  clearTimeout(timer);
+  ldT.textContent = '▶ Reproduzindo';
+  ldS.textContent = '';
+  ld.querySelector('.spin').style.display = 'none';
+  setTimeout(() => ld.classList.add('off'), 800);
 }
 
-function onFail() {
-  ldTxt.textContent = '😔 Indisponível no momento';
-  ldSub.innerHTML = 'Nenhuma fonte funcionou.<br>Tente outro filme ou volte mais tarde.';
-  ldPf.style.width = '0%';
+function fail() {
+  ld.querySelector('.spin').style.display = 'none';
+  ldT.textContent = '😔 Nenhuma fonte disponível';
+  ldS.textContent = 'Este conteúdo não está disponível agora.\nTente mais tarde ou escolha outro.';
+  if (!ld.querySelector('.retry')) {
+    const btn = document.createElement('button');
+    btn.className = 'retry';
+    btn.textContent = 'Tentar novamente';
+    btn.onclick = () => load(0);
+    ld.appendChild(btn);
+  }
 }
 
-// Inicia com a primeira fonte
-if (ID) {
-  switchTo(0);
-} else {
-  ldTxt.textContent = 'ID não informado';
-}
+// Inicia
+if (ID) load(0);
+else { ldT.textContent = 'ID não informado'; ldS.textContent = ''; }
 </script>
 </body>
 </html>
